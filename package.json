@@ -1,0 +1,19 @@
+{
+  "name": "song-search-site",
+  "type": "module",
+  "version": "1.0.0",
+  "private": true,
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "scripts": {
+    "import": "node scripts/import-db.js",
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "test": "node --test scripts/*.test.js"
+  },
+  "dependencies": {
+    "astro": "^5.0.0"
+  }
+}
