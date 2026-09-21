@@ -32,11 +32,11 @@ test('strips font table and color table content instead of rendering it', () => 
 });
 
 test('decodes hex-escaped Windows-1252 bytes', () => {
-  assert.equal(rtfToPlainText(String.raw`Caf\'e9`), 'Café');
+  assert.equal(rtfToPlainText(String.raw`Caf\'e9`), 'Caf' + String.fromCharCode(0xE9));
 });
 
 test('decodes \\uN unicode escapes and swallows the ASCII fallback char', () => {
-  assert.equal(rtfToPlainText(String.raw`Caf\u233?`), 'Café');
+  assert.equal(rtfToPlainText(String.raw`Caf\u233?`), 'Caf' + String.fromCharCode(0xE9));
 });
 
 test('returns an empty string for empty or whitespace-only RTF', () => {
@@ -47,4 +47,16 @@ test('returns an empty string for empty or whitespace-only RTF', () => {
 test('returns an empty string for non-string input', () => {
   assert.equal(rtfToPlainText(null), '');
   assert.equal(rtfToPlainText(undefined), '');
+});
+
+test('respects \\ucN so it swallows the correct number of unicode fallback characters', () => {
+  const inputRTF = '\\uc0\\u8217no fallback swallowed';
+  const expected = String.fromCharCode(0x2019) + 'no fallback swallowed';
+  assert.equal(rtfToPlainText(inputRTF), expected);
+});
+
+test('\\uc reverts to its previous value when the enclosing group closes', () => {
+  const inputRTF = '{\\uc0\\u8217}\\u233?';
+  const expected = String.fromCharCode(0x2019) + String.fromCharCode(0xE9);
+  assert.equal(rtfToPlainText(inputRTF), expected);
 });

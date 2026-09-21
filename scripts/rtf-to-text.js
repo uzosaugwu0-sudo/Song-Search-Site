@@ -27,20 +27,23 @@ export function rtfToPlainText(rtf) {
 
   let out = '';
   const skipStack = [false];
+  const ucStack = [1];
   let pendingUnicodeSkip = 0;
   const isSkipped = () => skipStack[skipStack.length - 1];
 
   const re = new RegExp(TOKEN_RE);
   let match;
   while ((match = re.exec(rtf)) !== null) {
-    const [, hex, uni, word, , symbol, brace, text] = match;
+    const [, hex, uni, word, wordArg, symbol, brace, text] = match;
 
     if (brace === '{') {
       skipStack.push(isSkipped());
+      ucStack.push(ucStack[ucStack.length - 1]);
       continue;
     }
     if (brace === '}') {
       if (skipStack.length > 1) skipStack.pop();
+      if (ucStack.length > 1) ucStack.pop();
       continue;
     }
 
@@ -52,6 +55,9 @@ export function rtfToPlainText(rtf) {
     if (word !== undefined) {
       if (SKIP_DESTINATIONS.has(word)) {
         skipStack[skipStack.length - 1] = true;
+      }
+      if (word === 'uc' && wordArg !== undefined) {
+        ucStack[ucStack.length - 1] = parseInt(wordArg, 10);
       }
       if (isSkipped()) continue;
       if (pendingUnicodeSkip > 0) pendingUnicodeSkip--;
@@ -72,7 +78,7 @@ export function rtfToPlainText(rtf) {
       let code = parseInt(uni, 10);
       if (code < 0) code += 65536;
       out += String.fromCodePoint(code);
-      pendingUnicodeSkip = 1;
+      pendingUnicodeSkip = ucStack[ucStack.length - 1];
       continue;
     }
 
