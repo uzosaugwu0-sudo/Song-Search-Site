@@ -23,3 +23,4 @@ exports, commit, and push. Cloudflare Pages rebuilds automatically.
 - Build command: `npm run import && npm run build`
 - Build output directory: `dist`
 - Connect the GitHub repo for auto-deploy on push to the default branch.
+- Node version: controlled by the `.node-version` file at the repo root (currently `24`). Cloudflare Pages does not read `package.json`'s `engines` field, so if `.node-version` is ever removed or not respected, set the `NODE_VERSION` build environment variable instead (`node:sqlite` requires a recent Node).

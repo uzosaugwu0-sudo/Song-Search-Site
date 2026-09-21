@@ -36,9 +36,22 @@ export function runImport({
 
   const wordsByRowId = new Map(wordRows.map((w) => [w.song_id, w.words]));
 
+  const invalidRows = [];
   const failures = [];
   const songs = songRows.map((row) => {
-    const rtf = wordsByRowId.get(row.rowid);
+    const titleValid = typeof row.title === 'string' && row.title.trim().length > 0;
+    const uidValid = typeof row.song_uid === 'string' && row.song_uid.length > 0;
+    if (!titleValid || !uidValid) {
+      const label = titleValid ? `"${row.title}"` : `row ${row.rowid}`;
+      const problems = [];
+      if (!titleValid) problems.push('missing/invalid title');
+      if (!uidValid) problems.push('missing/invalid song_uid');
+      invalidRows.push(`${label} (row ${row.rowid}): ${problems.join(', ')}`);
+      return null;
+    }
+
+    const raw = wordsByRowId.get(row.rowid);
+    const rtf = typeof raw === 'string' ? raw : raw ? Buffer.from(raw).toString('utf8') : '';
     const lyrics = rtf ? rtfToPlainText(rtf) : '';
     if (!lyrics.trim()) {
       failures.push(`${row.title} (song_uid ${row.song_uid})`);
@@ -51,10 +64,18 @@ export function runImport({
     };
   });
 
+  if (invalidRows.length > 0) {
+    throw new Error(
+      `Import failed: ${invalidRows.length} row(s) have a missing or invalid title/song_uid:\n` +
+        invalidRows.map((f) => `  - ${f}`).join('\n')
+    );
+  }
+
   if (failures.length > 0) {
     throw new Error(
       `Import failed: ${failures.length} song(s) produced empty lyrics:\n` +
-        failures.map((f) => `  - ${f}`).join('\n')
+        failures.map((f) => `  - ${f}`).join('\n') +
+        '\nFix these songs in ProPresenter (make sure they have lyrics) and re-export, or remove them, then try the update again.'
     );
   }
 

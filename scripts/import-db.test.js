@@ -68,6 +68,89 @@ test('runImport exits with a clear error when a song has empty lyrics', () => {
   rmSync(dir, { recursive: true, force: true });
 });
 
+test('runImport coerces BLOB words (Buffer/Uint8Array) to text instead of treating them as empty', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'song-import-test-'));
+  const songsPath = join(dir, 'Songs.db');
+  const wordsPath = join(dir, 'SongWords.db');
+
+  const songsDb = new DatabaseSync(songsPath);
+  songsDb.exec('CREATE TABLE song (song_uid TEXT, title TEXT, author TEXT)');
+  songsDb.prepare('INSERT INTO song (song_uid, title, author) VALUES (?, ?, ?)').run('uid-1', 'Amazing Grace', 'John Newton');
+  songsDb.close();
+
+  const wordsDb = new DatabaseSync(wordsPath);
+  wordsDb.exec('CREATE TABLE word (song_id INTEGER, words BLOB)');
+  const rtfBuffer = Buffer.from(String.raw`{\rtf1\ansi Amazing grace\par how sweet the sound}`, 'utf8');
+  wordsDb.prepare('INSERT INTO word (song_id, words) VALUES (?, ?)').run(1, rtfBuffer);
+  wordsDb.close();
+
+  const outPath = join(dir, 'songs.json');
+  runImport({ songsDbPath: songsPath, wordsDbPath: wordsPath, outPath });
+
+  const songs = JSON.parse(readFileSync(outPath, 'utf8'));
+  rmSync(dir, { recursive: true, force: true });
+
+  assert.equal(songs.length, 1);
+  assert.equal(songs[0].lyrics, 'Amazing grace\nhow sweet the sound');
+});
+
+test('runImport throws a clear error (not a raw TypeError) when a row has a NULL title', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'song-import-test-'));
+  const songsPath = join(dir, 'Songs.db');
+  const wordsPath = join(dir, 'SongWords.db');
+
+  const songsDb = new DatabaseSync(songsPath);
+  songsDb.exec('CREATE TABLE song (song_uid TEXT, title TEXT, author TEXT)');
+  songsDb.prepare('INSERT INTO song (song_uid, title, author) VALUES (?, ?, ?)').run('uid-1', null, 'Nobody');
+  songsDb.close();
+
+  const wordsDb = new DatabaseSync(wordsPath);
+  wordsDb.exec('CREATE TABLE word (song_id INTEGER, words TEXT)');
+  wordsDb.prepare('INSERT INTO word (song_id, words) VALUES (?, ?)').run(1, String.raw`{\rtf1\ansi Some lyrics}`);
+  wordsDb.close();
+
+  const outPath = join(dir, 'songs.json');
+
+  assert.throws(() => {
+    runImport({ songsDbPath: songsPath, wordsDbPath: wordsPath, outPath });
+  }, (err) => {
+    assert.ok(!(err instanceof TypeError), `expected a clear Error, got ${err.constructor.name}`);
+    assert.match(err.message, /row 1/);
+    return true;
+  });
+
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test('runImport throws a clear error (not a raw TypeError) when a row has a NULL song_uid', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'song-import-test-'));
+  const songsPath = join(dir, 'Songs.db');
+  const wordsPath = join(dir, 'SongWords.db');
+
+  const songsDb = new DatabaseSync(songsPath);
+  songsDb.exec('CREATE TABLE song (song_uid TEXT, title TEXT, author TEXT)');
+  songsDb.prepare('INSERT INTO song (song_uid, title, author) VALUES (?, ?, ?)').run(null, 'Untitled Hymn', 'Nobody');
+  songsDb.close();
+
+  const wordsDb = new DatabaseSync(wordsPath);
+  wordsDb.exec('CREATE TABLE word (song_id INTEGER, words TEXT)');
+  wordsDb.prepare('INSERT INTO word (song_id, words) VALUES (?, ?)').run(1, String.raw`{\rtf1\ansi Some lyrics}`);
+  wordsDb.close();
+
+  const outPath = join(dir, 'songs.json');
+
+  assert.throws(() => {
+    runImport({ songsDbPath: songsPath, wordsDbPath: wordsPath, outPath });
+  }, (err) => {
+    assert.ok(!(err instanceof TypeError), `expected a clear Error, got ${err.constructor.name}`);
+    assert.match(err.message, /Untitled Hymn/);
+    assert.match(err.message, /row 1/);
+    return true;
+  });
+
+  rmSync(dir, { recursive: true, force: true });
+});
+
 test('runImport throws a clear error when a DB file is missing', () => {
   const dir = mkdtempSync(join(tmpdir(), 'song-import-test-'));
   assert.throws(() => {
