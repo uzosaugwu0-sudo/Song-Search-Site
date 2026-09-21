@@ -1,0 +1,33 @@
+---
+import songs from '../../data/songs.json';
+
+export function getStaticPaths() {
+  return songs.map((song) => ({
+    params: { slug: song.slug },
+    props: { song },
+  }));
+}
+
+const { song } = Astro.props;
+---
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{song.title} — Song Search</title>
+</head>
+<body>
+  <p><a href="/">← Back to search</a></p>
+  <h1>{song.title}</h1>
+  {song.author && <p><em>{song.author}</em></p>}
+  <pre>{song.lyrics}</pre>
+  <button id="copy-link">Copy link</button>
+
+  <script>
+    document.getElementById('copy-link').addEventListener('click', async () => {
+      await navigator.clipboard.writeText(window.location.href);
+    });
+  </script>
+</body>
+</html>
