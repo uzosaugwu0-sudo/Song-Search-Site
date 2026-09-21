@@ -1,0 +1,44 @@
+---
+import songs from '../data/songs.json';
+
+const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
+---
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Song Search</title>
+</head>
+<body>
+  <h1>Song Search</h1>
+  <input type="search" id="search" placeholder="Search by title or lyrics..." autofocus />
+  <ul id="results"></ul>
+
+  <script type="application/json" id="songs-data" set:html={songsJson} />
+  <script>
+    const data = JSON.parse(document.getElementById('songs-data').textContent);
+    const input = document.getElementById('search');
+    const results = document.getElementById('results');
+
+    function render(query) {
+      results.innerHTML = '';
+      if (!query) return;
+      const q = query.toLowerCase();
+      const matches = data.filter(
+        (song) => song.title.toLowerCase().includes(q) || song.lyrics.toLowerCase().includes(q)
+      );
+      for (const song of matches) {
+        const li = document.createElement('li');
+        const a = document.createElement('a');
+        a.href = `/song/${song.slug}/`;
+        a.textContent = song.author ? `${song.title} — ${song.author}` : song.title;
+        li.appendChild(a);
+        results.appendChild(li);
+      }
+    }
+
+    input.addEventListener('input', (e) => render(e.target.value));
+  </script>
+</body>
+</html>
