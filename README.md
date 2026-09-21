@@ -17,3 +17,9 @@ Design spec: `docs/superpowers/specs/2026-09-20-song-search-site-design.md`.
 
 Replace `data/Songs.db` and `data/SongWords.db` with fresh ProPresenter
 exports, commit, and push. Cloudflare Pages rebuilds automatically.
+
+## Cloudflare Pages settings
+
+- Build command: `npm run import && npm run build`
+- Build output directory: `dist`
+- Connect the GitHub repo for auto-deploy on push to the default branch.
