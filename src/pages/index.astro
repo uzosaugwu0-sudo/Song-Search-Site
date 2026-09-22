@@ -105,18 +105,20 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
         history.replaceState(null, '', url);
       }
 
-      const q = query.toLowerCase();
-      const matches = query
-        ? data.filter((song) => song.title.toLowerCase().includes(q) || song.lyrics.toLowerCase().includes(q))
-        : [...data].sort((a, b) => a.title.localeCompare(b.title));
-
       if (!query) {
-        status.textContent = `Showing all ${matches.length} songs`;
-      } else if (matches.length > 0) {
-        status.textContent = `${matches.length} song${matches.length === 1 ? '' : 's'} found`;
-      } else {
-        status.textContent = 'No songs found. Try checking your spelling or using fewer words.';
+        const link = document.createElement('a');
+        link.href = '/browse/1/';
+        link.textContent = `Browse all ${data.length} songs →`;
+        status.replaceChildren(link);
+        return;
       }
+
+      const q = query.toLowerCase();
+      const matches = data.filter((song) => song.title.toLowerCase().includes(q) || song.lyrics.toLowerCase().includes(q));
+
+      status.textContent = matches.length > 0
+        ? `${matches.length} song${matches.length === 1 ? '' : 's'} found`
+        : 'No songs found. Try checking your spelling or using fewer words.';
 
       for (const song of matches) {
         const li = document.createElement('li');

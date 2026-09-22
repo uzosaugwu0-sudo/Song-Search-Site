@@ -1,0 +1,100 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import songs from '../../data/songs.json';
+
+export function getStaticPaths() {
+  const PAGE_SIZE = 50;
+  const sorted = [...songs].sort((a, b) => a.title.localeCompare(b.title));
+  const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
+
+  return Array.from({ length: totalPages }, (_, i) => {
+    const page = i + 1;
+    return {
+      params: { page: String(page) },
+      props: {
+        pageSongs: sorted.slice(i * PAGE_SIZE, (i + 1) * PAGE_SIZE),
+        page,
+        totalPages,
+      },
+    };
+  });
+}
+
+const { pageSongs, page, totalPages } = Astro.props;
+---
+<Layout title={`Browse songs (page ${page} of ${totalPages}) — Song Search`}>
+  <p><a href="/">← Back to search</a></p>
+  <h1>Browse Songs</h1>
+  <p class="page-info">Page {page} of {totalPages}</p>
+
+  <ul id="results">
+    {pageSongs.map((song) => (
+      <li>
+        <a class="result-card" href={`/song/${song.slug}/`}>
+          <div class="result-title">{song.title}</div>
+          {song.author && <div class="result-author">{song.author}</div>}
+        </a>
+      </li>
+    ))}
+  </ul>
+
+  <nav class="pagination">
+    {page > 1 ? <a href={`/browse/${page - 1}/`}>← Prev</a> : <span />}
+    <span class="page-count">Page {page} of {totalPages}</span>
+    {page < totalPages ? <a href={`/browse/${page + 1}/`}>Next →</a> : <span />}
+  </nav>
+
+  <style>
+    .page-info {
+      color: var(--color-muted-foreground);
+      margin: 0 0 8px;
+    }
+    #results {
+      list-style: none;
+      margin: 24px 0 0;
+      padding: 0;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 16px;
+    }
+    .result-card {
+      display: block;
+      padding: 20px;
+      border: 1px solid var(--color-border);
+      border-radius: 16px;
+      background: var(--color-card);
+      color: var(--color-card-foreground);
+      text-decoration: none;
+      box-shadow: var(--shadow-card);
+      transition: transform 150ms ease, box-shadow 150ms ease;
+    }
+    .result-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 2px 4px rgba(26, 26, 46, 0.08), 0 12px 28px rgba(26, 26, 46, 0.1);
+    }
+    .result-title {
+      font-family: 'Sora', ui-sans-serif, system-ui, sans-serif;
+      font-size: 1.1rem;
+      font-weight: 700;
+    }
+    .result-author { color: var(--color-muted-foreground); font-size: 0.9rem; }
+    .pagination {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 32px;
+      gap: 16px;
+    }
+    .pagination a {
+      padding: 10px 18px;
+      border: 1px solid var(--color-border);
+      border-radius: 10px;
+      text-decoration: none;
+      background: var(--color-card);
+    }
+    .page-count {
+      color: var(--color-muted-foreground);
+      font-size: 0.9rem;
+    }
+  </style>
+</Layout>
