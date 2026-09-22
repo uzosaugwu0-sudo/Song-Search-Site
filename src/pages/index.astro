@@ -7,7 +7,8 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
 <Layout title="Wisdom Assembly Song Search">
   <h1>Wisdom Assembly Song Search</h1>
   <input type="search" id="search" placeholder="Search by title or lyrics..." autofocus />
-  <p id="status" hidden></p>
+  <p class="hint">Try a phrase from the lyrics, or the title.</p>
+  <p id="status"></p>
   <ul id="results"></ul>
 
   <style is:global>
@@ -24,6 +25,11 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
     #search:focus {
       outline: 2px solid var(--color-primary);
       outline-offset: 1px;
+    }
+    .hint {
+      color: var(--color-muted-foreground);
+      font-size: 0.9rem;
+      margin: 8px 0 0;
     }
     #status {
       color: var(--color-muted-foreground);
@@ -93,24 +99,24 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
 
     function render(query, { updateUrl = true } = {}) {
       results.innerHTML = '';
-      status.hidden = true;
 
       if (updateUrl) {
         const url = query ? `?q=${encodeURIComponent(query)}` : location.pathname;
         history.replaceState(null, '', url);
       }
 
-      if (!query) return;
-
       const q = query.toLowerCase();
-      const matches = data.filter(
-        (song) => song.title.toLowerCase().includes(q) || song.lyrics.toLowerCase().includes(q)
-      );
+      const matches = query
+        ? data.filter((song) => song.title.toLowerCase().includes(q) || song.lyrics.toLowerCase().includes(q))
+        : [...data].sort((a, b) => a.title.localeCompare(b.title));
 
-      status.hidden = false;
-      status.textContent = matches.length > 0
-        ? `${matches.length} song${matches.length === 1 ? '' : 's'} found`
-        : 'No songs found';
+      if (!query) {
+        status.textContent = `Showing all ${matches.length} songs`;
+      } else if (matches.length > 0) {
+        status.textContent = `${matches.length} song${matches.length === 1 ? '' : 's'} found`;
+      } else {
+        status.textContent = 'No songs found. Try checking your spelling or using fewer words.';
+      }
 
       for (const song of matches) {
         const li = document.createElement('li');
@@ -123,7 +129,7 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
         title.textContent = song.title;
         a.appendChild(title);
 
-        const parts = snippetParts(song.lyrics, q);
+        const parts = query ? snippetParts(song.lyrics, q) : null;
         if (parts) {
           const snipEl = document.createElement('div');
           snipEl.className = 'result-snippet';
@@ -148,9 +154,7 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
     input.addEventListener('input', (e) => render(e.target.value));
 
     const initialQuery = new URLSearchParams(location.search).get('q') || '';
-    if (initialQuery) {
-      input.value = initialQuery;
-      render(initialQuery, { updateUrl: false });
-    }
+    input.value = initialQuery;
+    render(initialQuery, { updateUrl: false });
   </script>
 </Layout>

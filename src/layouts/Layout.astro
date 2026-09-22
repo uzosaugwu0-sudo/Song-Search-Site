@@ -65,10 +65,17 @@ const { title, description = 'Search a song database by title or lyrics.' } = As
       margin: 0 auto;
       padding: 32px 20px 64px;
     }
+    .site-logo {
+      display: block;
+      height: 56px;
+      width: auto;
+      margin-bottom: 20px;
+    }
   </style>
 </head>
 <body>
   <div class="container">
+    <img src="/logo.png" alt="Wisdom Assembly Family Church" class="site-logo" />
     <slot />
   </div>
 </body>
