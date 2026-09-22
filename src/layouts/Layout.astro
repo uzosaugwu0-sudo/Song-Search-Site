@@ -14,33 +14,35 @@ const { title, description = 'Search a song database by title or lyrics.' } = As
   <title>{title}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Cormorant+Garamond:wght@600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <style>
     :root {
-      --color-primary: #7a6a3d;
+      --color-primary: #4f46e5;
       --color-on-primary: #ffffff;
-      --color-accent: #7a6a3d;
-      --color-background: #e5e5e5;
-      --color-foreground: #1b2a4a;
+      --color-accent: #4f46e5;
+      --color-background: #f5f5f7;
+      --color-foreground: #1a1a2e;
       --color-card: #ffffff;
-      --color-card-foreground: #1b2a4a;
-      --color-muted: #f0f0f0;
-      --color-muted-foreground: #5f6360;
-      --color-border: #d8d8d8;
+      --color-card-foreground: #1a1a2e;
+      --color-muted: #eeeef4;
+      --color-muted-foreground: #63637a;
+      --color-border: #e2e2ea;
+      --shadow-card: 0 1px 3px rgba(26, 26, 46, 0.06), 0 8px 24px rgba(26, 26, 46, 0.06);
       color-scheme: light dark;
     }
     @media (prefers-color-scheme: dark) {
       :root {
-        --color-primary: #c9b26b;
-        --color-on-primary: #1b2a4a;
-        --color-accent: #c9b26b;
-        --color-background: #14192b;
-        --color-foreground: #e8e6df;
-        --color-card: #1e2740;
-        --color-card-foreground: #e8e6df;
-        --color-muted: #262f4a;
-        --color-muted-foreground: #a3a7b8;
-        --color-border: #333e5c;
+        --color-primary: #818cf8;
+        --color-on-primary: #1a1a2e;
+        --color-accent: #818cf8;
+        --color-background: #14141f;
+        --color-foreground: #eaeaf5;
+        --color-card: #1e1e30;
+        --color-card-foreground: #eaeaf5;
+        --color-muted: #26263c;
+        --color-muted-foreground: #9d9db3;
+        --color-border: #33334d;
+        --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.3);
       }
     }
     * { box-sizing: border-box; }
@@ -48,18 +50,18 @@ const { title, description = 'Search a song database by title or lyrics.' } = As
       margin: 0;
       background: var(--color-background);
       color: var(--color-foreground);
-      font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+      font-family: 'Sora', ui-sans-serif, system-ui, sans-serif;
       line-height: 1.6;
     }
     h1 {
-      font-family: 'Cormorant Garamond', Georgia, serif;
-      font-weight: 700;
+      font-family: 'Sora', ui-sans-serif, system-ui, sans-serif;
+      font-weight: 800;
       margin: 0 0 8px;
     }
     a { color: var(--color-primary); }
     button { font-family: inherit; }
     .container {
-      max-width: 680px;
+      max-width: 1040px;
       margin: 0 auto;
       padding: 32px 20px 64px;
     }

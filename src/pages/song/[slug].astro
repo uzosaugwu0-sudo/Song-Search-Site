@@ -21,32 +21,46 @@ const firstLine = stanzas.flat().find((line) => !LABEL_RE.test(line.trim())) ?? 
 const description = firstLine.length > 140 ? `${firstLine.slice(0, 140)}…` : firstLine;
 ---
 <Layout title={`${song.title} — Song Search`} description={description}>
-  <p><a href="/">← Back to search</a></p>
-  <h1>{song.title}</h1>
-  {song.author && <p class="author">{song.author}</p>}
+  <div class="page">
+    <p><a href="/">← Back to search</a></p>
+    <h1>{song.title}</h1>
+    {song.author && <p class="author">{song.author}</p>}
 
-  <div class="lyrics">
-    {stanzas.map((lines) => (
-      <div class="stanza">
-        {lines.map((line) => (
-          LABEL_RE.test(line.trim())
-            ? <p class="label">{line.trim()}</p>
-            : <p>{line}</p>
-        ))}
-      </div>
-    ))}
+    <div class="lyrics">
+      {stanzas.map((lines) => (
+        <div class="stanza">
+          {lines.map((line) => (
+            LABEL_RE.test(line.trim())
+              ? <p class="label">{line.trim()}</p>
+              : <p>{line}</p>
+          ))}
+        </div>
+      ))}
+    </div>
+
+    <button id="copy-link">Copy link</button>
   </div>
 
-  <button id="copy-link">Copy link</button>
-
   <style>
+    .page {
+      max-width: 680px;
+      margin: 0 auto;
+    }
     .author {
       color: var(--color-muted-foreground);
       font-style: italic;
       margin: 0 0 24px;
     }
-    .lyrics { margin-bottom: 28px; }
+    .lyrics {
+      margin-bottom: 28px;
+      padding: 24px 28px;
+      background: var(--color-card);
+      border: 1px solid var(--color-border);
+      border-radius: 16px;
+      box-shadow: var(--shadow-card);
+    }
     .stanza { margin-bottom: 20px; }
+    .stanza:last-child { margin-bottom: 0; }
     .stanza p { margin: 0 0 2px; }
     .label {
       font-weight: 600;
@@ -60,7 +74,7 @@ const description = firstLine.length > 140 ? `${firstLine.slice(0, 140)}…` : f
       background: var(--color-primary);
       color: var(--color-on-primary);
       border: none;
-      border-radius: 8px;
+      border-radius: 12px;
       padding: 10px 18px;
       font-size: 0.95rem;
       cursor: pointer;
