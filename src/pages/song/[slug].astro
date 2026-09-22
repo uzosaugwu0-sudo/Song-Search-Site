@@ -1,4 +1,5 @@
 ---
+import Layout from '../../layouts/Layout.astro';
 import songs from '../../data/songs.json';
 
 export function getStaticPaths() {
@@ -9,25 +10,76 @@ export function getStaticPaths() {
 }
 
 const { song } = Astro.props;
+
+const LABEL_RE = /^\[?(verse|chorus|bridge|pre-?chorus|tag|ending|outro|intro|refrain|interlude)\s*\d*\]?:?$/i;
+
+const stanzas = song.lyrics
+  .split(/\n\s*\n/)
+  .map((stanza) => stanza.split('\n').filter((line) => line.trim()));
+
+const firstLine = stanzas.flat().find((line) => !LABEL_RE.test(line.trim())) ?? song.title;
+const description = firstLine.length > 140 ? `${firstLine.slice(0, 140)}…` : firstLine;
 ---
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>{song.title} — Song Search</title>
-</head>
-<body>
+<Layout title={`${song.title} — Song Search`} description={description}>
   <p><a href="/">← Back to search</a></p>
   <h1>{song.title}</h1>
-  {song.author && <p><em>{song.author}</em></p>}
-  <pre>{song.lyrics}</pre>
+  {song.author && <p class="author">{song.author}</p>}
+
+  <div class="lyrics">
+    {stanzas.map((lines) => (
+      <div class="stanza">
+        {lines.map((line) => (
+          LABEL_RE.test(line.trim())
+            ? <p class="label">{line.trim()}</p>
+            : <p>{line}</p>
+        ))}
+      </div>
+    ))}
+  </div>
+
   <button id="copy-link">Copy link</button>
 
+  <style>
+    .author {
+      color: var(--color-muted-foreground);
+      font-style: italic;
+      margin: 0 0 24px;
+    }
+    .lyrics { margin-bottom: 28px; }
+    .stanza { margin-bottom: 20px; }
+    .stanza p { margin: 0 0 2px; }
+    .label {
+      font-weight: 600;
+      font-size: 0.8rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--color-primary);
+      margin-bottom: 6px !important;
+    }
+    #copy-link {
+      background: var(--color-primary);
+      color: var(--color-on-primary);
+      border: none;
+      border-radius: 8px;
+      padding: 10px 18px;
+      font-size: 0.95rem;
+      cursor: pointer;
+      transition: opacity 150ms ease;
+    }
+    #copy-link:hover { opacity: 0.85; }
+  </style>
+
   <script>
-    document.getElementById('copy-link').addEventListener('click', async () => {
-      await navigator.clipboard.writeText(window.location.href);
+    const btn = document.getElementById('copy-link');
+    const defaultText = btn.textContent;
+    btn.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(window.location.href);
+        btn.textContent = 'Copied!';
+      } catch {
+        btn.textContent = 'Copy failed';
+      }
+      setTimeout(() => { btn.textContent = defaultText; }, 1500);
     });
   </script>
-</body>
-</html>
+</Layout>

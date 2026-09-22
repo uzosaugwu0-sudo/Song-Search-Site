@@ -13,3 +13,7 @@ If a deploy fails because a song has empty lyrics, the error message will
 name the song(s) involved. The fix is to open ProPresenter, make sure
 each named song actually has lyrics (or remove the song), re-export both
 `.db` files, and push again.
+
+File names are case-sensitive on Cloudflare's (Linux) build server, even
+though Windows and macOS don't care — always name them exactly `Songs.db`
+and `SongWords.db`.

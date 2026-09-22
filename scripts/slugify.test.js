@@ -77,3 +77,11 @@ test('assignSlugs sanitizes song ids containing spaces/slashes when disambiguati
     assert.ok(!/[\s/]/.test(song.slug));
   }
 });
+
+test('assignSlugs throws if two distinct ids sanitize to the same slug', () => {
+  const songs = [
+    { id: 'uid/1', title: 'Alleluia' },
+    { id: 'uid-1', title: 'Alleluia' },
+  ];
+  assert.throws(() => assignSlugs(songs), /Duplicate slugs/);
+});

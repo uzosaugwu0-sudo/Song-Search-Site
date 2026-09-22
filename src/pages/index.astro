@@ -1,38 +1,114 @@
 ---
+import Layout from '../layouts/Layout.astro';
 import songs from '../data/songs.json';
 
 const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
 ---
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Song Search</title>
-</head>
-<body>
+<Layout title="Song Search">
   <h1>Song Search</h1>
   <input type="search" id="search" placeholder="Search by title or lyrics..." autofocus />
+  <p id="empty" hidden>No songs found.</p>
   <ul id="results"></ul>
+
+  <style>
+    #search {
+      width: 100%;
+      padding: 12px 14px;
+      font-size: 1rem;
+      border: 1px solid var(--color-border);
+      border-radius: 10px;
+      background: var(--color-card);
+      color: var(--color-card-foreground);
+    }
+    #search:focus {
+      outline: 2px solid var(--color-primary);
+      outline-offset: 1px;
+    }
+    #empty {
+      color: var(--color-muted-foreground);
+      margin-top: 16px;
+    }
+    #results {
+      list-style: none;
+      margin: 16px 0 0;
+      padding: 0;
+      display: grid;
+      gap: 10px;
+    }
+    .result-card {
+      display: block;
+      padding: 14px 16px;
+      border: 1px solid var(--color-border);
+      border-radius: 10px;
+      background: var(--color-card);
+      color: var(--color-card-foreground);
+      text-decoration: none;
+      transition: border-color 150ms ease;
+    }
+    .result-card:hover { border-color: var(--color-primary); }
+    .result-title { font-weight: 600; }
+    .result-author { color: var(--color-muted-foreground); font-size: 0.9rem; }
+    .result-snippet {
+      margin-top: 4px;
+      font-size: 0.9rem;
+      color: var(--color-muted-foreground);
+    }
+  </style>
 
   <script type="application/json" id="songs-data" set:html={songsJson} />
   <script>
     const data = JSON.parse(document.getElementById('songs-data').textContent);
     const input = document.getElementById('search');
     const results = document.getElementById('results');
+    const empty = document.getElementById('empty');
+
+    function snippet(lyrics, q) {
+      const idx = lyrics.toLowerCase().indexOf(q);
+      if (idx === -1) return '';
+      const start = Math.max(0, idx - 30);
+      const end = Math.min(lyrics.length, idx + q.length + 50);
+      const text = lyrics.slice(start, end).replace(/\s+/g, ' ').trim();
+      return (start > 0 ? '…' : '') + text + (end < lyrics.length ? '…' : '');
+    }
 
     function render(query) {
       results.innerHTML = '';
+      empty.hidden = true;
       if (!query) return;
+
       const q = query.toLowerCase();
       const matches = data.filter(
         (song) => song.title.toLowerCase().includes(q) || song.lyrics.toLowerCase().includes(q)
       );
+
+      empty.hidden = matches.length > 0;
+
       for (const song of matches) {
         const li = document.createElement('li');
         const a = document.createElement('a');
+        a.className = 'result-card';
         a.href = `/song/${song.slug}/`;
-        a.textContent = song.author ? `${song.title} — ${song.author}` : song.title;
+
+        const title = document.createElement('div');
+        title.className = 'result-title';
+        title.textContent = song.title;
+        a.appendChild(title);
+
+        if (song.author) {
+          const author = document.createElement('div');
+          author.className = 'result-author';
+          author.textContent = song.author;
+          a.appendChild(author);
+        }
+
+        const snip = snippet(song.lyrics, q);
+        if (snip) {
+          const snipEl = document.createElement('div');
+          snipEl.className = 'result-snippet';
+          snipEl.textContent = snip;
+          a.appendChild(snipEl);
+        }
+
         li.appendChild(a);
         results.appendChild(li);
       }
@@ -40,5 +116,4 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
 
     input.addEventListener('input', (e) => render(e.target.value));
   </script>
-</body>
-</html>
+</Layout>
