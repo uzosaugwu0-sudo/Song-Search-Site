@@ -46,12 +46,22 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
       transition: border-color 150ms ease;
     }
     .result-card:hover { border-color: var(--color-primary); }
-    .result-title { font-weight: 600; }
+    .result-title {
+      font-family: 'Playfair Display', Georgia, serif;
+      font-size: 1.15rem;
+      font-weight: 700;
+    }
     .result-author { color: var(--color-muted-foreground); font-size: 0.9rem; }
     .result-snippet {
-      margin-top: 4px;
+      margin-top: 6px;
       font-size: 0.9rem;
       color: var(--color-muted-foreground);
+    }
+    .result-snippet mark {
+      background: var(--color-accent);
+      color: var(--color-on-primary);
+      padding: 0 2px;
+      border-radius: 3px;
     }
   </style>
 
@@ -62,13 +72,16 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
     const results = document.getElementById('results');
     const empty = document.getElementById('empty');
 
-    function snippet(lyrics, q) {
+    function snippetParts(lyrics, q) {
       const idx = lyrics.toLowerCase().indexOf(q);
-      if (idx === -1) return '';
+      if (idx === -1) return null;
       const start = Math.max(0, idx - 30);
       const end = Math.min(lyrics.length, idx + q.length + 50);
-      const text = lyrics.slice(start, end).replace(/\s+/g, ' ').trim();
-      return (start > 0 ? '…' : '') + text + (end < lyrics.length ? '…' : '');
+      return {
+        before: (start > 0 ? '…' : '') + lyrics.slice(start, idx).replace(/\s+/g, ' '),
+        match: lyrics.slice(idx, idx + q.length),
+        after: lyrics.slice(idx + q.length, end).replace(/\s+/g, ' ') + (end < lyrics.length ? '…' : ''),
+      };
     }
 
     function render(query) {
@@ -101,11 +114,15 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
           a.appendChild(author);
         }
 
-        const snip = snippet(song.lyrics, q);
-        if (snip) {
+        const parts = snippetParts(song.lyrics, q);
+        if (parts) {
           const snipEl = document.createElement('div');
           snipEl.className = 'result-snippet';
-          snipEl.textContent = snip;
+          snipEl.appendChild(document.createTextNode(parts.before));
+          const mark = document.createElement('mark');
+          mark.textContent = parts.match;
+          snipEl.appendChild(mark);
+          snipEl.appendChild(document.createTextNode(parts.after));
           a.appendChild(snipEl);
         }
 
