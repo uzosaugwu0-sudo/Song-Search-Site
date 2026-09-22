@@ -4,8 +4,8 @@ import songs from '../data/songs.json';
 
 const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
 ---
-<Layout title="Wisdom Assembly Song Search">
-  <h1>Wisdom Assembly Song Search</h1>
+<Layout title="Song Search">
+  <h1>Song Search</h1>
   <input type="search" id="search" placeholder="Search by title or lyrics..." autofocus />
   <p id="empty" hidden>No songs found.</p>
   <ul id="results"></ul>
