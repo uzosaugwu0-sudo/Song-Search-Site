@@ -22,7 +22,7 @@ const description = firstLine.length > 140 ? `${firstLine.slice(0, 140)}…` : f
 ---
 <Layout title={`${song.title} — Song Search`} description={description}>
   <div class="page">
-    <p><a href="/">← Back to search</a></p>
+    <p><a href="/" id="back-link">← Back to search</a></p>
     <h1>{song.title}</h1>
     {song.author && <p class="author">{song.author}</p>}
 
@@ -84,6 +84,11 @@ const description = firstLine.length > 140 ? `${firstLine.slice(0, 140)}…` : f
   </style>
 
   <script>
+    const query = new URLSearchParams(location.search).get('q');
+    if (query) {
+      document.getElementById('back-link').href = `/?q=${encodeURIComponent(query)}`;
+    }
+
     const btn = document.getElementById('copy-link');
     const defaultText = btn.textContent;
     btn.addEventListener('click', async () => {
