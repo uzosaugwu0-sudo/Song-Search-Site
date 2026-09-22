@@ -14,33 +14,33 @@ const { title, description = 'Search a song database by title or lyrics.' } = As
   <title>{title}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Cormorant+Garamond:wght@600;700&display=swap" rel="stylesheet" />
   <style>
     :root {
-      --color-primary: #0891b2;
+      --color-primary: #7a6a3d;
       --color-on-primary: #ffffff;
-      --color-accent: #0e7490;
-      --color-background: #ffffff;
-      --color-foreground: #0a0e27;
+      --color-accent: #7a6a3d;
+      --color-background: #e5e5e5;
+      --color-foreground: #1b2a4a;
       --color-card: #ffffff;
-      --color-card-foreground: #0a0e27;
-      --color-muted: #eef2ff;
-      --color-muted-foreground: #4b5563;
-      --color-border: #e2e8f0;
+      --color-card-foreground: #1b2a4a;
+      --color-muted: #f0f0f0;
+      --color-muted-foreground: #5f6360;
+      --color-border: #d8d8d8;
       color-scheme: light dark;
     }
     @media (prefers-color-scheme: dark) {
       :root {
-        --color-primary: #22d3ee;
-        --color-on-primary: #0a0e27;
-        --color-accent: #22d3ee;
-        --color-background: #0a0e27;
-        --color-foreground: #e8eaf6;
-        --color-card: #131a3a;
-        --color-card-foreground: #e8eaf6;
-        --color-muted: #1e2650;
-        --color-muted-foreground: #a5b4d4;
-        --color-border: #2d3561;
+        --color-primary: #c9b26b;
+        --color-on-primary: #1b2a4a;
+        --color-accent: #c9b26b;
+        --color-background: #14192b;
+        --color-foreground: #e8e6df;
+        --color-card: #1e2740;
+        --color-card-foreground: #e8e6df;
+        --color-muted: #262f4a;
+        --color-muted-foreground: #a3a7b8;
+        --color-border: #333e5c;
       }
     }
     * { box-sizing: border-box; }
@@ -52,8 +52,8 @@ const { title, description = 'Search a song database by title or lyrics.' } = As
       line-height: 1.6;
     }
     h1 {
-      font-family: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
-      font-weight: 800;
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-weight: 700;
       margin: 0 0 8px;
     }
     a { color: var(--color-primary); }
