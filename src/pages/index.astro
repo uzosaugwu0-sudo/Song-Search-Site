@@ -39,17 +39,23 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
       display: block;
       padding: 14px 16px;
       border: 1px solid var(--color-border);
+      border-left: 4px solid var(--color-border);
       border-radius: 10px;
       background: var(--color-card);
       color: var(--color-card-foreground);
       text-decoration: none;
-      transition: border-color 150ms ease;
+      transition: border-color 150ms ease, transform 150ms ease;
     }
-    .result-card:hover { border-color: var(--color-primary); }
+    .result-card:hover {
+      border-color: var(--color-primary);
+      border-left-color: var(--color-primary);
+      transform: translateX(2px);
+    }
     .result-title {
       font-family: 'Playfair Display', Georgia, serif;
-      font-size: 1.15rem;
+      font-size: 1.25rem;
       font-weight: 800;
+      color: var(--color-primary);
     }
     .result-author { color: var(--color-muted-foreground); font-size: 0.9rem; }
     .result-snippet {
@@ -58,10 +64,10 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
       color: var(--color-muted-foreground);
     }
     .result-snippet mark {
-      background: var(--color-muted);
-      color: var(--color-primary);
+      background: var(--color-primary);
+      color: var(--color-on-primary);
       font-weight: 600;
-      padding: 0 2px;
+      padding: 1px 4px;
       border-radius: 3px;
     }
   </style>
