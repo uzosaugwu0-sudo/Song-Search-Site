@@ -49,7 +49,7 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
     .result-title {
       font-family: 'Playfair Display', Georgia, serif;
       font-size: 1.15rem;
-      font-weight: 700;
+      font-weight: 800;
     }
     .result-author { color: var(--color-muted-foreground); font-size: 0.9rem; }
     .result-snippet {
@@ -58,8 +58,9 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
       color: var(--color-muted-foreground);
     }
     .result-snippet mark {
-      background: var(--color-accent);
-      color: var(--color-on-primary);
+      background: var(--color-muted);
+      color: var(--color-primary);
+      font-weight: 600;
       padding: 0 2px;
       border-radius: 3px;
     }
@@ -107,13 +108,6 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
         title.textContent = song.title;
         a.appendChild(title);
 
-        if (song.author) {
-          const author = document.createElement('div');
-          author.className = 'result-author';
-          author.textContent = song.author;
-          a.appendChild(author);
-        }
-
         const parts = snippetParts(song.lyrics, q);
         if (parts) {
           const snipEl = document.createElement('div');
@@ -124,6 +118,11 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
           snipEl.appendChild(mark);
           snipEl.appendChild(document.createTextNode(parts.after));
           a.appendChild(snipEl);
+        } else if (song.author) {
+          const author = document.createElement('div');
+          author.className = 'result-author';
+          author.textContent = song.author;
+          a.appendChild(author);
         }
 
         li.appendChild(a);
