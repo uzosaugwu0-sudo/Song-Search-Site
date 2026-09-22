@@ -10,6 +10,7 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
   <p class="hint">Try a phrase from the lyrics, or the title.</p>
   <p id="status"></p>
   <ul id="results"></ul>
+  <nav id="pagination"></nav>
 
   <style is:global>
     #search {
@@ -76,6 +77,24 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
       padding: 1px 4px;
       border-radius: 3px;
     }
+    #pagination {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 32px;
+      gap: 16px;
+    }
+    #pagination a {
+      padding: 10px 18px;
+      border: 1px solid var(--color-border);
+      border-radius: 10px;
+      text-decoration: none;
+      background: var(--color-card);
+    }
+    #pagination .page-count {
+      color: var(--color-muted-foreground);
+      font-size: 0.9rem;
+    }
   </style>
 
   <script type="application/json" id="songs-data" set:html={songsJson} />
@@ -84,6 +103,11 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
     const input = document.getElementById('search');
     const results = document.getElementById('results');
     const status = document.getElementById('status');
+    const pagination = document.getElementById('pagination');
+
+    const PAGE_SIZE = 50;
+    const sorted = [...data].sort((a, b) => a.title.localeCompare(b.title));
+    const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
 
     function snippetParts(lyrics, q) {
       const idx = lyrics.toLowerCase().indexOf(q);
@@ -97,20 +121,96 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
       };
     }
 
-    function render(query, { updateUrl = true } = {}) {
-      results.innerHTML = '';
+    function buildCard(song, query, page) {
+      const li = document.createElement('li');
+      const a = document.createElement('a');
+      a.className = 'result-card';
+      a.href = query
+        ? `/song/${song.slug}/?q=${encodeURIComponent(query)}`
+        : `/song/${song.slug}/${page > 1 ? `?page=${page}` : ''}`;
 
-      if (updateUrl) {
-        const url = query ? `?q=${encodeURIComponent(query)}` : location.pathname;
-        history.replaceState(null, '', url);
+      const title = document.createElement('div');
+      title.className = 'result-title';
+      title.textContent = song.title;
+      a.appendChild(title);
+
+      const parts = query ? snippetParts(song.lyrics, query.toLowerCase()) : null;
+      if (parts) {
+        const snipEl = document.createElement('div');
+        snipEl.className = 'result-snippet';
+        snipEl.appendChild(document.createTextNode(parts.before));
+        const mark = document.createElement('mark');
+        mark.textContent = parts.match;
+        snipEl.appendChild(mark);
+        snipEl.appendChild(document.createTextNode(parts.after));
+        a.appendChild(snipEl);
+      } else if (song.author) {
+        const author = document.createElement('div');
+        author.className = 'result-author';
+        author.textContent = song.author;
+        a.appendChild(author);
       }
 
-      if (!query) {
-        const link = document.createElement('a');
-        link.href = '/browse/1/';
-        link.textContent = `Browse all ${data.length} songs →`;
-        status.replaceChildren(link);
-        return;
+      li.appendChild(a);
+      return li;
+    }
+
+    function renderPagination(page) {
+      pagination.replaceChildren();
+
+      if (page > 1) {
+        const prev = document.createElement('a');
+        prev.href = '#';
+        prev.textContent = '← Prev';
+        prev.addEventListener('click', (e) => { e.preventDefault(); goToPage(page - 1); });
+        pagination.appendChild(prev);
+      } else {
+        pagination.appendChild(document.createElement('span'));
+      }
+
+      const count = document.createElement('span');
+      count.className = 'page-count';
+      count.textContent = `Page ${page} of ${totalPages}`;
+      pagination.appendChild(count);
+
+      if (page < totalPages) {
+        const next = document.createElement('a');
+        next.href = '#';
+        next.textContent = 'Next →';
+        next.addEventListener('click', (e) => { e.preventDefault(); goToPage(page + 1); });
+        pagination.appendChild(next);
+      } else {
+        pagination.appendChild(document.createElement('span'));
+      }
+    }
+
+    function renderBrowse(page, { updateUrl = true } = {}) {
+      page = Math.min(Math.max(1, page), totalPages);
+      results.replaceChildren();
+      pagination.style.display = 'flex';
+
+      if (updateUrl) {
+        history.replaceState(null, '', page > 1 ? `?page=${page}` : location.pathname);
+      }
+
+      status.textContent = `Showing ${sorted.length} songs`;
+
+      const slice = sorted.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+      for (const song of slice) results.appendChild(buildCard(song, '', page));
+
+      renderPagination(page);
+    }
+
+    function goToPage(page) {
+      renderBrowse(page);
+    }
+
+    function renderSearch(query, { updateUrl = true } = {}) {
+      results.replaceChildren();
+      pagination.style.display = 'none';
+
+      if (updateUrl) {
+        history.replaceState(null, '', `?q=${encodeURIComponent(query)}`);
       }
 
       const q = query.toLowerCase();
@@ -120,43 +220,26 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
         ? `${matches.length} song${matches.length === 1 ? '' : 's'} found`
         : 'No songs found. Try checking your spelling or using fewer words.';
 
-      for (const song of matches) {
-        const li = document.createElement('li');
-        const a = document.createElement('a');
-        a.className = 'result-card';
-        a.href = `/song/${song.slug}/?q=${encodeURIComponent(query)}`;
-
-        const title = document.createElement('div');
-        title.className = 'result-title';
-        title.textContent = song.title;
-        a.appendChild(title);
-
-        const parts = query ? snippetParts(song.lyrics, q) : null;
-        if (parts) {
-          const snipEl = document.createElement('div');
-          snipEl.className = 'result-snippet';
-          snipEl.appendChild(document.createTextNode(parts.before));
-          const mark = document.createElement('mark');
-          mark.textContent = parts.match;
-          snipEl.appendChild(mark);
-          snipEl.appendChild(document.createTextNode(parts.after));
-          a.appendChild(snipEl);
-        } else if (song.author) {
-          const author = document.createElement('div');
-          author.className = 'result-author';
-          author.textContent = song.author;
-          a.appendChild(author);
-        }
-
-        li.appendChild(a);
-        results.appendChild(li);
-      }
+      for (const song of matches) results.appendChild(buildCard(song, query));
     }
 
-    input.addEventListener('input', (e) => render(e.target.value));
+    input.addEventListener('input', (e) => {
+      const query = e.target.value;
+      if (query) {
+        renderSearch(query);
+      } else {
+        renderBrowse(1);
+      }
+    });
 
-    const initialQuery = new URLSearchParams(location.search).get('q') || '';
+    const params = new URLSearchParams(location.search);
+    const initialQuery = params.get('q') || '';
+    const initialPage = Math.max(1, parseInt(params.get('page'), 10) || 1);
     input.value = initialQuery;
-    render(initialQuery, { updateUrl: false });
+    if (initialQuery) {
+      renderSearch(initialQuery, { updateUrl: false });
+    } else {
+      renderBrowse(initialPage, { updateUrl: false });
+    }
   </script>
 </Layout>

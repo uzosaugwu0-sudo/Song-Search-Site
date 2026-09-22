@@ -84,9 +84,13 @@ const description = firstLine.length > 140 ? `${firstLine.slice(0, 140)}…` : f
   </style>
 
   <script>
-    const query = new URLSearchParams(location.search).get('q');
+    const params = new URLSearchParams(location.search);
+    const query = params.get('q');
+    const page = params.get('page');
     if (query) {
       document.getElementById('back-link').href = `/?q=${encodeURIComponent(query)}`;
+    } else if (page) {
+      document.getElementById('back-link').href = `/?page=${encodeURIComponent(page)}`;
     }
 
     const btn = document.getElementById('copy-link');
