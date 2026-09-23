@@ -17,3 +17,7 @@ each named song actually has lyrics (or remove the song), re-export both
 File names are case-sensitive on Cloudflare's (Linux) build server, even
 though Windows and macOS don't care — always name them exactly `Songs.db`
 and `SongWords.db`.
+
+For a plain-language, no-git-required version of this workflow (for a
+volunteer using GitHub's drag-and-drop web upload), see
+[`HOW-TO-UPDATE-SONGS.md`](../HOW-TO-UPDATE-SONGS.md) at the repo root.
