@@ -3,6 +3,20 @@
 Static site for searching a ProPresenter song database by title or lyrics.
 Design spec: `docs/superpowers/specs/2026-09-20-song-search-site-design.md`.
 
+## Keyboard shortcuts
+
+For searching and selecting a song without a mouse (handy during a live service):
+
+| Key | Action |
+|-----|--------|
+| `/` | Focus the search box |
+| `↑` / `↓` | Move the highlighted selection through the result cards |
+| `Enter` | Open the selected song |
+| `Esc` | Leave the search box so the arrow keys can navigate results |
+| `F` | Toggle favorite on the selected song |
+
+Shortcuts are inactive while typing in the search box, so normal typing (including letters that overlap a shortcut, like "f" or "/") is unaffected.
+
 ## Develop
 
     npm install
