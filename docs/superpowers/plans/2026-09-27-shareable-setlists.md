@@ -268,7 +268,8 @@ git commit -m "Add the SETLISTS Cloudflare KV namespace binding"
   - `buildSetlistValue(songIds: string[]): string` — JSON string `{ songIds, updatedAt }`
   - `prepareSongIdsForCreate(requestedIds: unknown, validIds: Set<string>): { songIds: string[] } | { error: string }`
   - `prepareSongIdsForUpdate(requestedIds: unknown, validIds: Set<string>): { songIds: string[] } | { error: string }`
-- Consumed by: Task 4's API routes (both `prepare...` functions plus `generateSetlistId`/`buildSetlistValue`).
+  - `jsonResponse(data: object, status?: number): Response` — a small shared helper so both API route files (Task 4) don't each redefine the same JSON-response wrapper.
+- Consumed by: Task 4's API routes (all of the above).
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -284,6 +285,7 @@ import {
   buildSetlistValue,
   prepareSongIdsForCreate,
   prepareSongIdsForUpdate,
+  jsonResponse,
 } from './setlist.js';
 
 test('MAX_SETLIST_SIZE is 50', () => {
@@ -364,6 +366,18 @@ test('prepareSongIdsForUpdate rejects more than MAX_SETLIST_SIZE valid ids', () 
   const result = prepareSongIdsForUpdate(requested, valid);
   assert.equal(result.error, 'A set list can hold at most 50 songs');
 });
+
+test('jsonResponse sets the status and Content-Type, and serializes the body as JSON', async () => {
+  const response = jsonResponse({ hello: 'world' }, 404);
+  assert.equal(response.status, 404);
+  assert.equal(response.headers.get('Content-Type'), 'application/json');
+  assert.deepEqual(await response.json(), { hello: 'world' });
+});
+
+test('jsonResponse defaults to status 200', () => {
+  const response = jsonResponse({ ok: true });
+  assert.equal(response.status, 200);
+});
 ```
 
 - [ ] **Step 2: Run the tests to verify they fail**
@@ -416,12 +430,19 @@ export function prepareSongIdsForUpdate(requestedIds, validIds) {
   }
   return { songIds };
 }
+
+export function jsonResponse(data, status = 200) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { 'Content-Type': 'application/json' },
+  });
+}
 ```
 
 - [ ] **Step 4: Run the tests to verify they pass**
 
 Run: `node --test src/lib/setlist.test.js`
-Expected: PASS, 15 tests.
+Expected: PASS, 17 tests.
 
 - [ ] **Step 5: Commit**
 
@@ -439,7 +460,7 @@ git commit -m "Add set list validation logic with unit tests"
 - Create: `src/pages/api/setlists/[id].js`
 
 **Interfaces:**
-- Consumes: `prepareSongIdsForCreate`, `prepareSongIdsForUpdate`, `generateSetlistId`, `buildSetlistValue` from `../../../lib/setlist.js` (Task 3); `locals.runtime.env.SETLISTS` (Task 2).
+- Consumes: `prepareSongIdsForCreate`, `prepareSongIdsForUpdate`, `generateSetlistId`, `buildSetlistValue`, `jsonResponse` from `../../../lib/setlist.js` (Task 3); `locals.runtime.env.SETLISTS` (Task 2).
 - Produces: `POST /api/setlists` → `{ id: string }`; `GET /api/setlists/:id` → `{ songIds: string[], updatedAt: string }` or 404; `PUT /api/setlists/:id` → same shape as GET, or 404. Consumed by Task 5's client helper and Task 6's page.
 
 - [ ] **Step 1: Create the collection route**
@@ -447,19 +468,12 @@ git commit -m "Add set list validation logic with unit tests"
 Create `src/pages/api/setlists/index.js`:
 
 ```js
-import { prepareSongIdsForCreate, generateSetlistId, buildSetlistValue } from '../../../lib/setlist.js';
+import { prepareSongIdsForCreate, generateSetlistId, buildSetlistValue, jsonResponse } from '../../../lib/setlist.js';
 import songs from '../../../data/songs.json';
 
 export const prerender = false;
 
 const validSongIds = new Set(songs.map((s) => s.id));
-
-function jsonResponse(data, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
-}
 
 export async function POST({ request, locals }) {
   const kv = locals.runtime.env.SETLISTS;
@@ -486,19 +500,12 @@ export async function POST({ request, locals }) {
 Create `src/pages/api/setlists/[id].js`:
 
 ```js
-import { prepareSongIdsForUpdate, buildSetlistValue } from '../../../lib/setlist.js';
+import { prepareSongIdsForUpdate, buildSetlistValue, jsonResponse } from '../../../lib/setlist.js';
 import songs from '../../../data/songs.json';
 
 export const prerender = false;
 
 const validSongIds = new Set(songs.map((s) => s.id));
-
-function jsonResponse(data, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
-}
 
 export async function GET({ params, locals }) {
   const kv = locals.runtime.env.SETLISTS;
