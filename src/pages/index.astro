@@ -8,8 +8,19 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
   <h1>Wisdom Assembly Song Search</h1>
   <input type="search" id="search" placeholder="Search by title or lyrics..." autofocus />
   <p class="hint">Try a phrase from the lyrics, or the title.</p>
+
+  <section id="favorites-section" hidden>
+    <h2>Favorites</h2>
+    <ul id="favorites-list" class="quick-list"></ul>
+  </section>
+
+  <section id="recent-section" hidden>
+    <h2>Recently Used</h2>
+    <ul id="recent-list" class="quick-list"></ul>
+  </section>
+
   <p id="status"></p>
-  <ul id="results"></ul>
+  <ul id="results" class="quick-list"></ul>
   <nav id="pagination"></nav>
 
   <style is:global>
@@ -36,13 +47,24 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
       color: var(--color-muted-foreground);
       margin-top: 16px;
     }
-    #results {
+    #favorites-section, #recent-section {
+      margin-top: 28px;
+    }
+    #favorites-section h2, #recent-section h2 {
+      font-family: 'Sora', ui-sans-serif, system-ui, sans-serif;
+      font-size: 1.1rem;
+      margin: 0 0 12px;
+    }
+    .quick-list {
       list-style: none;
       margin: 24px 0 0;
       padding: 0;
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
       gap: 16px;
+    }
+    #favorites-section .quick-list, #recent-section .quick-list {
+      margin-top: 0;
     }
     .result-card {
       display: block;
@@ -108,6 +130,37 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
     const PAGE_SIZE = 50;
     const sorted = [...data].sort((a, b) => a.title.localeCompare(b.title));
     const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
+    const songById = new Map(data.map((song) => [song.id, song]));
+
+    const favoritesSection = document.getElementById('favorites-section');
+    const favoritesList = document.getElementById('favorites-list');
+    const recentSection = document.getElementById('recent-section');
+    const recentList = document.getElementById('recent-list');
+
+    function getFavorites() {
+      try { return JSON.parse(localStorage.getItem('songSearchFavorites') || '[]'); }
+      catch { return []; }
+    }
+    function getRecent() {
+      try { return JSON.parse(localStorage.getItem('songSearchRecent') || '[]'); }
+      catch { return []; }
+    }
+
+    function renderQuickList(ids, listEl, sectionEl, limit) {
+      const songsForIds = ids.map((id) => songById.get(id)).filter(Boolean).slice(0, limit);
+      listEl.replaceChildren();
+      if (songsForIds.length === 0) {
+        sectionEl.hidden = true;
+        return;
+      }
+      sectionEl.hidden = false;
+      for (const song of songsForIds) listEl.appendChild(buildCard(song, ''));
+    }
+
+    function renderQuickSections() {
+      renderQuickList(getFavorites(), favoritesList, favoritesSection, 8);
+      renderQuickList(getRecent(), recentList, recentSection, 8);
+    }
 
     function snippetParts(lyrics, q) {
       const idx = lyrics.toLowerCase().indexOf(q);
@@ -188,6 +241,7 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
       page = Math.min(Math.max(1, page), totalPages);
       results.replaceChildren();
       pagination.style.display = 'flex';
+      renderQuickSections();
 
       if (updateUrl) {
         history.replaceState(null, '', page > 1 ? `?page=${page}` : location.pathname);
@@ -208,6 +262,8 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
     function renderSearch(query, { updateUrl = true } = {}) {
       results.replaceChildren();
       pagination.style.display = 'none';
+      favoritesSection.hidden = true;
+      recentSection.hidden = true;
 
       if (updateUrl) {
         history.replaceState(null, '', `?q=${encodeURIComponent(query)}`);
