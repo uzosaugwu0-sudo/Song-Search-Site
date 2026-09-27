@@ -7,7 +7,6 @@ export const prerender = false;
 const { id } = Astro.params;
 const kv = Astro.locals.runtime.env.SETLISTS;
 const raw = await kv.get(id);
-const songById = new Map(songs.map((song) => [song.id, song]));
 
 let initialSongIds = [];
 if (raw) {
@@ -130,7 +129,8 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
   </style>
 
   <script type="application/json" id="songs-data" set:html={songsJson} />
-  <script define:vars={{ setId: id, initialSongIds }}>
+  <script type="application/json" id="set-init-data" set:html={JSON.stringify({ setId: id, initialSongIds })} />
+  <script>
     import { updateSetlist } from '../../lib/setlist-client.js';
 
     const setSongsList = document.getElementById('set-songs');
@@ -138,6 +138,7 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
     if (setSongsList) {
       const data = JSON.parse(document.getElementById('songs-data').textContent);
       const songById = new Map(data.map((song) => [song.id, song]));
+      const { setId, initialSongIds } = JSON.parse(document.getElementById('set-init-data').textContent);
       let currentIds = initialSongIds;
       const statusEl = document.getElementById('status');
 
