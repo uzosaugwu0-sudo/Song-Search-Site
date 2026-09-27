@@ -6,5 +6,11 @@
     "directory": "./dist",
     "binding": "ASSETS",
     "not_found_handling": "404-page"
-  }
+  },
+  "kv_namespaces": [
+    {
+      "binding": "SETLISTS",
+      "id": "f6cda0efd80549b8980f31511db3b004"
+    }
+  ]
 }
