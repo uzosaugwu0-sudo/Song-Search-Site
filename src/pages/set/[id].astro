@@ -1,0 +1,265 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import songs from '../../data/songs.json';
+
+export const prerender = false;
+
+const { id } = Astro.params;
+const kv = Astro.locals.runtime.env.SETLISTS;
+const raw = await kv.get(id);
+const songById = new Map(songs.map((song) => [song.id, song]));
+
+let initialSongIds = [];
+if (raw) {
+  initialSongIds = JSON.parse(raw).songIds;
+}
+
+const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
+---
+<Layout title="Set List — Song Search" description="A shared, editable list of songs.">
+  <div class="page">
+    <p><a href="/">← Back to search</a></p>
+
+    {raw === null ? (
+      <div>
+        <h1>Set List Not Found</h1>
+        <p class="status">This set list doesn't exist. It may have been mistyped, or the link is wrong.</p>
+      </div>
+    ) : (
+      <div id="set-app">
+        <h1>Set List</h1>
+        <div class="actions">
+          <button id="copy-link">Copy link</button>
+        </div>
+        <p id="status"></p>
+        <ul id="set-songs"></ul>
+
+        <h2>Add a song</h2>
+        <input type="search" id="add-search" placeholder="Search by title or lyrics..." />
+        <ul id="add-results"></ul>
+      </div>
+    )}
+  </div>
+
+  <style>
+    .page {
+      max-width: 680px;
+      margin: 0 auto;
+    }
+    .status {
+      color: var(--color-muted-foreground);
+      margin: 16px 0;
+    }
+    .actions {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    #copy-link {
+      background: var(--color-primary);
+      color: var(--color-on-primary);
+      border: none;
+      border-radius: 12px;
+      padding: 10px 18px;
+      font-size: 0.95rem;
+      cursor: pointer;
+      transition: opacity 150ms ease;
+    }
+    #copy-link:hover { opacity: 0.85; }
+    #set-songs, #add-results {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .set-song {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 16px;
+      border: 1px solid var(--color-border);
+      border-radius: 12px;
+      background: var(--color-card);
+    }
+    .set-song a {
+      font-weight: 600;
+      text-decoration: none;
+    }
+    .set-song a:hover { text-decoration: underline; }
+    .set-song .author {
+      color: var(--color-muted-foreground);
+      font-size: 0.9rem;
+    }
+    .set-song .controls {
+      margin-left: auto;
+      display: flex;
+      gap: 6px;
+    }
+    .set-song .controls button {
+      border: 1px solid var(--color-border);
+      background: var(--color-card);
+      border-radius: 8px;
+      padding: 4px 10px;
+      cursor: pointer;
+    }
+    .set-song .controls button:disabled {
+      opacity: 0.4;
+      cursor: default;
+    }
+    #add-search {
+      width: 100%;
+      padding: 12px 16px;
+      font-size: 1rem;
+      border: 1px solid var(--color-border);
+      border-radius: 12px;
+      background: var(--color-card);
+      color: var(--color-card-foreground);
+      margin-top: 8px;
+    }
+    #add-results button {
+      width: 100%;
+      text-align: left;
+      padding: 10px 14px;
+      border: 1px solid var(--color-border);
+      border-radius: 10px;
+      background: var(--color-card);
+      cursor: pointer;
+    }
+  </style>
+
+  <script type="application/json" id="songs-data" set:html={songsJson} />
+  <script define:vars={{ setId: id, initialSongIds }}>
+    import { updateSetlist } from '../../lib/setlist-client.js';
+
+    const setSongsList = document.getElementById('set-songs');
+
+    if (setSongsList) {
+      const data = JSON.parse(document.getElementById('songs-data').textContent);
+      const songById = new Map(data.map((song) => [song.id, song]));
+      let currentIds = initialSongIds;
+      const statusEl = document.getElementById('status');
+
+      function renderSetSongs() {
+        setSongsList.replaceChildren();
+        if (currentIds.length === 0) {
+          statusEl.textContent = 'No songs in this set yet — add some below.';
+        } else {
+          statusEl.textContent = `${currentIds.length} song${currentIds.length === 1 ? '' : 's'} in this set`;
+        }
+
+        currentIds.forEach((songId, index) => {
+          const song = songById.get(songId);
+          if (!song) return;
+
+          const li = document.createElement('li');
+          li.className = 'set-song';
+
+          const link = document.createElement('a');
+          link.href = `/song/${song.slug}/`;
+          link.textContent = song.title;
+          li.appendChild(link);
+
+          if (song.author) {
+            const author = document.createElement('span');
+            author.className = 'author';
+            author.textContent = song.author;
+            li.appendChild(author);
+          }
+
+          const controls = document.createElement('span');
+          controls.className = 'controls';
+
+          const upBtn = document.createElement('button');
+          upBtn.type = 'button';
+          upBtn.textContent = '↑';
+          upBtn.disabled = index === 0;
+          upBtn.addEventListener('click', () => reorder(index, -1));
+          controls.appendChild(upBtn);
+
+          const downBtn = document.createElement('button');
+          downBtn.type = 'button';
+          downBtn.textContent = '↓';
+          downBtn.disabled = index === currentIds.length - 1;
+          downBtn.addEventListener('click', () => reorder(index, 1));
+          controls.appendChild(downBtn);
+
+          const removeBtn = document.createElement('button');
+          removeBtn.type = 'button';
+          removeBtn.textContent = 'Remove';
+          removeBtn.addEventListener('click', () => removeAt(index));
+          controls.appendChild(removeBtn);
+
+          li.appendChild(controls);
+          setSongsList.appendChild(li);
+        });
+      }
+
+      async function persist(nextIds) {
+        currentIds = nextIds;
+        renderSetSongs();
+        try {
+          await updateSetlist(setId, currentIds);
+        } catch {
+          statusEl.textContent = 'Could not save that change. Check your connection and try again.';
+        }
+      }
+
+      function reorder(index, direction) {
+        const target = index + direction;
+        if (target < 0 || target >= currentIds.length) return;
+        const next = [...currentIds];
+        [next[index], next[target]] = [next[target], next[index]];
+        persist(next);
+      }
+
+      function removeAt(index) {
+        persist(currentIds.filter((_, i) => i !== index));
+      }
+
+      function addSong(songId) {
+        if (currentIds.includes(songId)) return;
+        persist([...currentIds, songId]);
+      }
+
+      renderSetSongs();
+
+      const addInput = document.getElementById('add-search');
+      const addResults = document.getElementById('add-results');
+      addInput.addEventListener('input', (e) => {
+        const q = e.target.value.trim().toLowerCase();
+        addResults.replaceChildren();
+        if (!q) return;
+        const matches = data
+          .filter((song) => !currentIds.includes(song.id) && song.title.toLowerCase().includes(q))
+          .slice(0, 8);
+        for (const song of matches) {
+          const li = document.createElement('li');
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.textContent = `+ ${song.title}`;
+          btn.addEventListener('click', () => {
+            addSong(song.id);
+            addInput.value = '';
+            addResults.replaceChildren();
+          });
+          li.appendChild(btn);
+          addResults.appendChild(li);
+        }
+      });
+
+      const copyBtn = document.getElementById('copy-link');
+      const defaultCopyText = copyBtn.textContent;
+      copyBtn.addEventListener('click', async () => {
+        try {
+          await navigator.clipboard.writeText(window.location.href);
+          copyBtn.textContent = 'Copied!';
+        } catch {
+          copyBtn.textContent = 'Copy failed';
+        }
+        setTimeout(() => { copyBtn.textContent = defaultCopyText; }, 1500);
+      });
+    }
+  </script>
+</Layout>
