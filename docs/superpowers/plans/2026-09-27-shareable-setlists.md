@@ -771,7 +771,6 @@ export const prerender = false;
 const { id } = Astro.params;
 const kv = Astro.locals.runtime.env.SETLISTS;
 const raw = await kv.get(id);
-const songById = new Map(songs.map((song) => [song.id, song]));
 
 let initialSongIds = [];
 if (raw) {
@@ -894,7 +893,8 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
   </style>
 
   <script type="application/json" id="songs-data" set:html={songsJson} />
-  <script define:vars={{ setId: id, initialSongIds }}>
+  <script type="application/json" id="set-init-data" set:html={JSON.stringify({ setId: id, initialSongIds })} />
+  <script>
     import { updateSetlist } from '../../lib/setlist-client.js';
 
     const setSongsList = document.getElementById('set-songs');
@@ -902,6 +902,7 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
     if (setSongsList) {
       const data = JSON.parse(document.getElementById('songs-data').textContent);
       const songById = new Map(data.map((song) => [song.id, song]));
+      const { setId, initialSongIds } = JSON.parse(document.getElementById('set-init-data').textContent);
       let currentIds = initialSongIds;
       const statusEl = document.getElementById('status');
 
@@ -1030,6 +1031,8 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
 ```
 
 Note on structure: the executable `<script>` tag is always present in the template (never wrapped in the `{raw === null ? ... : ...}` conditional) — only the DOM it operates on is conditional. The script itself guards all its logic behind `if (setSongsList) { ... }`, which is `null` on the not-found page. This avoids relying on how Astro's compiler handles a `<script>` tag nested inside a conditional JSX-like expression, which isn't a pattern used anywhere else in this codebase.
+
+Note on `define:vars`: this script deliberately does **not** use `define:vars` to pass `setId`/`initialSongIds` in, even though that's the pattern used on the song page. `define:vars` compiles its script into a plain, non-module inline script (wrapped in an IIFE) so the injected variables are available as plain JS — and a top-level `import` statement inside that kind of script is a hard `SyntaxError` in every browser. Since this script needs `import { updateSetlist }`, it stays a plain `<script>` (a real ES module, exactly like `index.astro`'s existing script), and `setId`/`initialSongIds` are passed through the second `<script type="application/json">` data island above instead, parsed the same way `songs-data` already is.
 
 - [ ] **Step 2: Manual verification against the dev server**
 
@@ -1560,21 +1563,7 @@ Change to:
 
 - [ ] **Step 3: Wire up the click handler**
 
-The script currently starts:
-
-```js
-  <script define:vars={{ songId: song.id }}>
-    const params = new URLSearchParams(location.search);
-```
-
-Change to:
-
-```js
-  <script define:vars={{ songId: song.id }}>
-    import { addSongToSet } from '../../lib/setlist-client.js';
-
-    const params = new URLSearchParams(location.search);
-```
+**Important — do not add a top-level `import` to this script tag.** This script uses `define:vars={{ songId: song.id }}`, which Astro compiles into a plain non-module inline script (wrapped in an IIFE) so the injected variables are available as plain JS — but that also means a top-level `import` statement is a hard `SyntaxError` in every browser (confirmed by testing the actual compiled output against a real dev server during this plan's implementation — the identical mistake was caught and fixed on the `/set/[id]/` page in Task 6). The script tag itself is unchanged by this step; only the click handler at the end uses a *dynamic* `import()` instead, which works fine inside a non-module script since it's a function call, not a static declaration.
 
 The script currently ends:
 
@@ -1603,6 +1592,7 @@ Change to:
     addToSetBtn.addEventListener('click', async () => {
       addToSetBtn.disabled = true;
       try {
+        const { addSongToSet } = await import('../../lib/setlist-client.js');
         await addSongToSet(songId);
         addToSetBtn.textContent = 'Added!';
       } catch {
