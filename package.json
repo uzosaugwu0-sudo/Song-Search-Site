@@ -14,6 +14,7 @@
     "test": "node --test scripts/*.test.js src/lib/*.test.js"
   },
   "dependencies": {
+    "@astrojs/cloudflare": "^12.6.13",
     "astro": "^5.0.0"
   }
 }

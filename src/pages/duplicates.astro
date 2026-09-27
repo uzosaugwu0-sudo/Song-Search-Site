@@ -3,6 +3,8 @@ import Layout from '../layouts/Layout.astro';
 import songs from '../data/songs.json';
 import { findDuplicateGroups } from '../lib/duplicate-groups.js';
 
+export const prerender = true;
+
 const duplicateGroups = findDuplicateGroups(songs);
 const totalDuplicateSongs = duplicateGroups.reduce((sum, group) => sum + group.length, 0);
 ---

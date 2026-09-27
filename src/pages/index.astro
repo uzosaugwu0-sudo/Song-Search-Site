@@ -2,6 +2,8 @@
 import Layout from '../layouts/Layout.astro';
 import songs from '../data/songs.json';
 
+export const prerender = true;
+
 const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
 ---
 <Layout title="Wisdom Assembly Song Search">
