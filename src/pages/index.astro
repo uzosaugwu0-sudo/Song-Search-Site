@@ -162,6 +162,56 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
       renderQuickList(getRecent(), recentList, recentSection, 8);
     }
 
+    function normalize(s) {
+      return s.toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, ' ').trim();
+    }
+
+    function levenshtein(a, b) {
+      const rows = a.length + 1;
+      const cols = b.length + 1;
+      const dist = Array.from({ length: rows }, (_, i) => [i, ...Array(cols - 1).fill(0)]);
+      for (let j = 0; j < cols; j++) dist[0][j] = j;
+      for (let i = 1; i < rows; i++) {
+        for (let j = 1; j < cols; j++) {
+          const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+          dist[i][j] = Math.min(
+            dist[i - 1][j] + 1,
+            dist[i][j - 1] + 1,
+            dist[i - 1][j - 1] + cost,
+          );
+        }
+      }
+      return dist[rows - 1][cols - 1];
+    }
+
+    function fuzzyThreshold(len) {
+      if (len <= 4) return 1;
+      if (len <= 8) return 2;
+      return Math.floor(len * 0.3);
+    }
+
+    function fuzzyTitleMatches(query) {
+      const nq = normalize(query);
+      if (nq.length < 3) return [];
+      const singleWord = !nq.includes(' ');
+      const scored = [];
+      for (const song of data) {
+        const nt = normalize(song.title);
+        let best = levenshtein(nq, nt);
+        if (singleWord) {
+          for (const word of nt.split(' ')) {
+            const d = levenshtein(nq, word);
+            if (d < best) best = d;
+          }
+        }
+        if (best <= fuzzyThreshold(Math.min(nq.length, nt.length))) {
+          scored.push({ song, dist: best });
+        }
+      }
+      scored.sort((a, b) => a.dist - b.dist);
+      return scored.slice(0, 8).map((s) => s.song);
+    }
+
     function snippetParts(lyrics, q) {
       const idx = lyrics.toLowerCase().indexOf(q);
       if (idx === -1) return null;
@@ -272,11 +322,20 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
       const q = query.toLowerCase();
       const matches = data.filter((song) => song.title.toLowerCase().includes(q) || song.lyrics.toLowerCase().includes(q));
 
-      status.textContent = matches.length > 0
-        ? `${matches.length} song${matches.length === 1 ? '' : 's'} found`
-        : 'No songs found. Try checking your spelling or using fewer words.';
+      if (matches.length > 0) {
+        status.textContent = `${matches.length} song${matches.length === 1 ? '' : 's'} found`;
+        for (const song of matches) results.appendChild(buildCard(song, query));
+        return;
+      }
 
-      for (const song of matches) results.appendChild(buildCard(song, query));
+      const fuzzyMatches = fuzzyTitleMatches(query);
+      if (fuzzyMatches.length > 0) {
+        status.textContent = `No exact matches for "${query}". Showing songs with similar titles:`;
+        for (const song of fuzzyMatches) results.appendChild(buildCard(song, ''));
+        return;
+      }
+
+      status.textContent = 'No songs found. Try checking your spelling or using fewer words.';
     }
 
     input.addEventListener('input', (e) => {
