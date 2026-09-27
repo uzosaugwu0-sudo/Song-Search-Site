@@ -35,6 +35,10 @@ exports, commit, and push. Cloudflare Pages rebuilds automatically.
 For a non-technical, no-git-required version of this (drag-and-drop via
 GitHub's web UI), see [`HOW-TO-UPDATE-SONGS.md`](HOW-TO-UPDATE-SONGS.md).
 
+After updating, check `/duplicates/` on the live site for a report of songs
+that may be duplicates (same title once case/punctuation/spacing are
+ignored) — it's not linked from the home page, so visit it directly.
+
 ## Cloudflare Pages settings
 
 - Build command: `npm run import && npm run build`

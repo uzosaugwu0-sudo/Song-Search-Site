@@ -11,7 +11,7 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "test": "node --test scripts/*.test.js"
+    "test": "node --test scripts/*.test.js src/lib/*.test.js"
   },
   "dependencies": {
     "astro": "^5.0.0"

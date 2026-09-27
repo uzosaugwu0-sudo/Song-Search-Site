@@ -136,6 +136,8 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
 
   <script type="application/json" id="songs-data" set:html={songsJson} />
   <script>
+    import { normalizeTitle } from '../lib/normalize.js';
+
     const data = JSON.parse(document.getElementById('songs-data').textContent);
     const input = document.getElementById('search');
     const results = document.getElementById('results');
@@ -224,10 +226,6 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
       btn.addEventListener('click', () => switchTab(btn.dataset.tab));
     }
 
-    function normalize(s) {
-      return s.toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, ' ').trim();
-    }
-
     function levenshtein(a, b) {
       const rows = a.length + 1;
       const cols = b.length + 1;
@@ -253,12 +251,12 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
     }
 
     function fuzzyTitleMatches(query) {
-      const nq = normalize(query);
+      const nq = normalizeTitle(query);
       if (nq.length < 3) return [];
       const singleWord = !nq.includes(' ');
       const scored = [];
       for (const song of data) {
-        const nt = normalize(song.title);
+        const nt = normalizeTitle(song.title);
         let best = levenshtein(nq, nt);
         if (singleWord) {
           for (const word of nt.split(' ')) {
