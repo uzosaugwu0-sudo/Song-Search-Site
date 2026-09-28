@@ -39,7 +39,8 @@ the set list lives in a Cloudflare KV store, not in the URL itself.
 ## Update the song database
 
 Replace `data/Songs.db` and `data/SongWords.db` with fresh ProPresenter
-exports, commit, and push. Cloudflare Pages rebuilds automatically.
+exports, commit, and push, then deploy manually — see
+[Deployment](#deployment) below.
 
 For a non-technical, no-git-required version of this (drag-and-drop via
 GitHub's web UI), see [`HOW-TO-UPDATE-SONGS.md`](HOW-TO-UPDATE-SONGS.md).
@@ -48,14 +49,17 @@ After updating, check `/duplicates/` on the live site for a report of songs
 that may be duplicates (same title once case/punctuation/spacing are
 ignored) — it's not linked from the home page, so visit it directly.
 
-## Cloudflare Pages settings
+## Deployment
 
 - Build command: `npm run import && npm run build`
 - Build output directory: `dist`
-- Connect the GitHub repo for auto-deploy on push to the default branch.
-- Node version: controlled by the `.node-version` file at the repo root (currently `24`). Cloudflare Pages does not read `package.json`'s `engines` field, so if `.node-version` is ever removed or not respected, set the `NODE_VERSION` build environment variable instead (`node:sqlite` requires a recent Node).
-- This site now deploys a real Worker (not pure static assets) to
+- Deploys are manual: after pushing, run `npx wrangler deploy`. There is
+  no GitHub Actions workflow and no Cloudflare Pages Git integration —
+  nothing auto-deploys on push.
+- Node version: controlled by the `.node-version` file at the repo root (currently `24`). `wrangler deploy` does not read `package.json`'s `engines` field, so if `.node-version` is ever removed or not respected, set the `NODE_VERSION` environment variable instead (`node:sqlite` requires a recent Node).
+- This site deploys a real Worker (not pure static assets) to
   support set lists — `wrangler deploy` ships `dist/_worker.js/` as
   the Worker entry, with everything else served as static assets. A
-  Cloudflare KV namespace bound as `SETLISTS` is required; see
-  `wrangler.jsonc`.
+  Cloudflare KV namespace bound as `SETLISTS` is required; the binding
+  is read directly from `wrangler.jsonc` (not a Pages dashboard) by
+  `wrangler deploy`.
