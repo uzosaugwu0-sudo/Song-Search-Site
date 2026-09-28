@@ -1518,9 +1518,11 @@ Change to:
       <button id="favorite-toggle" aria-pressed="false">
         <span id="favorite-star">☆</span> Favorite
       </button>
-      <button id="add-to-set">Add to Set</button>
+      <button id="add-to-set" data-song-id={song.id}>Add to Set</button>
     </div>
 ```
+
+(`data-song-id` carries the song id to the new script below — see the note in Step 3 for why this doesn't just reuse the existing `define:vars`-injected `songId`.)
 
 - [ ] **Step 2: Style it like the Favorite button**
 
@@ -1561,11 +1563,16 @@ Change to:
   </style>
 ```
 
-- [ ] **Step 3: Wire up the click handler**
+- [ ] **Step 3: Wire up the click handler in a separate, real module script**
 
-**Important — do not add a top-level `import` to this script tag.** This script uses `define:vars={{ songId: song.id }}`, which Astro compiles into a plain non-module inline script (wrapped in an IIFE) so the injected variables are available as plain JS — but that also means a top-level `import` statement is a hard `SyntaxError` in every browser (confirmed by testing the actual compiled output against a real dev server during this plan's implementation — the identical mistake was caught and fixed on the `/set/[id]/` page in Task 6). The script tag itself is unchanged by this step; only the click handler at the end uses a *dynamic* `import()` instead, which works fine inside a non-module script since it's a function call, not a static declaration.
+**Do not touch the existing `<script define:vars={{ songId: song.id }}>` tag at all in this step** — leave it byte-for-byte as it already is. Two things rule out modifying it:
 
-The script currently ends:
+1. A top-level `import` statement inside it is a hard `SyntaxError` in every browser, because `define:vars` compiles its script into a plain non-module inline script (wrapped in an IIFE) — confirmed during Task 6's review, which hit exactly this.
+2. A *dynamic* `import()` call inside that same script is **also broken**, for a different reason: a browser resolves a relative specifier passed to dynamic `import()` inside a non-module classic script against the *document's URL*, not the source file's URL. So `import('../../lib/setlist-client.js')` called from inside this inline script resolves to a path that doesn't exist (confirmed via a real Playwright browser test reproducing a 404, and via an actual `astro build` showing no such path exists in `dist/` — the module only exists as a Vite-hashed chunk reachable from a real static `import` elsewhere). This was tried first and found broken during this plan's implementation.
+
+The fix that actually works: add the click handler in a **second, separate `<script>` tag** — a real ES module (no `define:vars`, exactly like the working pattern on `/set/[id]/` from Task 6) — with a genuine static top-level `import`. Since this script has no `define:vars`, it can't receive `songId` that way; instead it reads it from the button's `data-song-id` attribute (added in Step 1).
+
+The script section currently ends:
 
 ```js
     favBtn.addEventListener('click', () => {
@@ -1577,23 +1584,20 @@ The script currently ends:
   </script>
 ```
 
-Change to:
+Leave that exactly as-is, and add a new script tag immediately after it:
 
 ```js
-    favBtn.addEventListener('click', () => {
-      const favs = getFavorites();
-      const isFav = favs.includes(songId);
-      setFavorites(isFav ? favs.filter((x) => x !== songId) : [...favs, songId]);
-      updateFavButton(!isFav);
-    });
+  </script>
+
+  <script>
+    import { addSongToSet } from '../../lib/setlist-client.js';
 
     const addToSetBtn = document.getElementById('add-to-set');
     const addToSetDefaultText = addToSetBtn.textContent;
     addToSetBtn.addEventListener('click', async () => {
       addToSetBtn.disabled = true;
       try {
-        const { addSongToSet } = await import('../../lib/setlist-client.js');
-        await addSongToSet(songId);
+        await addSongToSet(addToSetBtn.dataset.songId);
         addToSetBtn.textContent = 'Added!';
       } catch {
         addToSetBtn.textContent = 'Failed — try again';
