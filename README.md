@@ -17,6 +17,15 @@ For searching and selecting a song without a mouse (handy during a live service)
 
 Shortcuts are inactive while typing in the search box, so normal typing (including letters that overlap a shortcut, like "f" or "/") is unaffected.
 
+## Set lists
+
+Build a list of songs (e.g. for a Sunday service) using the "+" button
+on any search result or the "Add to Set" button on a song page, then
+open the "My Set" tab and click "Share this set" to get a link like
+`/set/<id>/`. Anyone with that link can view it and add, remove, or
+reorder songs — changes are visible to everyone who has the link, since
+the set list lives in a Cloudflare KV store, not in the URL itself.
+
 ## Develop
 
     npm install
@@ -45,3 +54,8 @@ ignored) — it's not linked from the home page, so visit it directly.
 - Build output directory: `dist`
 - Connect the GitHub repo for auto-deploy on push to the default branch.
 - Node version: controlled by the `.node-version` file at the repo root (currently `24`). Cloudflare Pages does not read `package.json`'s `engines` field, so if `.node-version` is ever removed or not respected, set the `NODE_VERSION` build environment variable instead (`node:sqlite` requires a recent Node).
+- This site now deploys a real Worker (not pure static assets) to
+  support set lists — `wrangler deploy` ships `dist/_worker.js/` as
+  the Worker entry, with everything else served as static assets. A
+  Cloudflare KV namespace bound as `SETLISTS` is required; see
+  `wrangler.jsonc`.
