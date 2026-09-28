@@ -1,5 +1,5 @@
 const DRAFT_KEY = 'songSearchSetDraft';
-const LIVE_ID_KEY = 'songSearchSetId';
+const PLAYLISTS_KEY = 'songSearchPlaylists';
 
 function readIds(key) {
   try { return JSON.parse(localStorage.getItem(key) || '[]'); }
@@ -10,6 +10,15 @@ function writeIds(key, ids) {
   try { localStorage.setItem(key, JSON.stringify(ids)); } catch {}
 }
 
+function readPlaylists() {
+  try { return JSON.parse(localStorage.getItem(PLAYLISTS_KEY) || '[]'); }
+  catch { return []; }
+}
+
+function writePlaylists(playlists) {
+  try { localStorage.setItem(PLAYLISTS_KEY, JSON.stringify(playlists)); } catch {}
+}
+
 // --- Explicit-ID API calls, used directly by the /set/[id]/ page ---
 
 export async function fetchSetlist(id) {
@@ -18,122 +27,98 @@ export async function fetchSetlist(id) {
   return response.json();
 }
 
-export async function updateSetlist(id, songIds) {
+export async function updateSetlist(id, songIds, name) {
+  const body = name === undefined ? { songIds } : { songIds, name };
   const response = await fetch(`/api/setlists/${id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ songIds }),
+    body: JSON.stringify(body),
   });
   if (!response.ok) throw new Error('Failed to update set list');
   return response.json();
 }
 
-export async function createSetlist(songIds) {
+export async function createSetlist(songIds, name) {
   const response = await fetch('/api/setlists', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ songIds }),
+    body: JSON.stringify({ songIds, name }),
   });
   if (!response.ok) throw new Error('Failed to create set list');
   return response.json();
 }
 
-// Serializes concurrent live-set read-modify-write mutations so two calls
-// (e.g. two "+" buttons clicked in quick succession) queue instead of racing
-// on a stale read.
-let mutationQueue = Promise.resolve();
-
-function enqueue(fn) {
-  const result = mutationQueue.then(fn);
-  mutationQueue = result.catch(() => {}); // don't let one failure break the queue for subsequent calls
-  return result;
-}
-
-// --- Draft-vs-live helpers, used by the home page "My Set" tab and add-to-set buttons ---
-
-export function getLiveSetId() {
-  try { return localStorage.getItem(LIVE_ID_KEY); }
-  catch { return null; }
-}
+// --- Draft helpers: the playlist currently being built. Always local-only
+// (localStorage, no network), so there's no read-modify-write race to
+// guard against — unlike the old "live set" model this replaces. ---
 
 export function getDraftIds() {
   return readIds(DRAFT_KEY);
 }
 
-export async function getCurrentSetIds() {
-  const liveId = getLiveSetId();
-  if (!liveId) return getDraftIds();
-  const data = await fetchSetlist(liveId);
-  return data ? data.songIds : [];
-}
-
-export async function addSongToSet(songId) {
-  const liveId = getLiveSetId();
-  if (!liveId) {
-    const ids = getDraftIds();
-    if (ids.includes(songId)) return ids;
-    const next = [...ids, songId];
-    writeIds(DRAFT_KEY, next);
-    return next;
-  }
-  return enqueue(async () => {
-    const current = await getCurrentSetIds();
-    if (current.includes(songId)) return current;
-    const result = await updateSetlist(liveId, [...current, songId]);
-    return result.songIds;
-  });
-}
-
-export async function removeSongFromSet(songId) {
-  const liveId = getLiveSetId();
-  if (!liveId) {
-    const next = getDraftIds().filter((id) => id !== songId);
-    writeIds(DRAFT_KEY, next);
-    return next;
-  }
-  return enqueue(async () => {
-    const current = await getCurrentSetIds();
-    const result = await updateSetlist(liveId, current.filter((id) => id !== songId));
-    return result.songIds;
-  });
-}
-
-export async function reorderSongInSet(songId, direction) {
-  const liveId = getLiveSetId();
-  if (!liveId) {
-    const ids = getDraftIds();
-    const index = ids.indexOf(songId);
-    if (index === -1) return ids;
-    const target = index + direction;
-    if (target < 0 || target >= ids.length) return ids;
-    const next = [...ids];
-    [next[index], next[target]] = [next[target], next[index]];
-    writeIds(DRAFT_KEY, next);
-    return next;
-  }
-  return enqueue(async () => {
-    const ids = await getCurrentSetIds();
-    const index = ids.indexOf(songId);
-    if (index === -1) return ids;
-    const target = index + direction;
-    if (target < 0 || target >= ids.length) return ids;
-    const next = [...ids];
-    [next[index], next[target]] = [next[target], next[index]];
-    const result = await updateSetlist(liveId, next);
-    return result.songIds;
-  });
-}
-
-export async function shareSet() {
+export function addToDraft(songId) {
   const ids = getDraftIds();
-  const data = await createSetlist(ids);
-  try {
-    localStorage.setItem(LIVE_ID_KEY, data.id);
-    localStorage.removeItem(DRAFT_KEY);
-  } catch {}
-  return data.id;
+  if (ids.includes(songId)) return ids;
+  const next = [...ids, songId];
+  writeIds(DRAFT_KEY, next);
+  return next;
 }
 
-export function startNewSet() {
-  try { localStorage.removeItem(LIVE_ID_KEY); } catch {}
+export function removeFromDraft(songId) {
+  const next = getDraftIds().filter((id) => id !== songId);
+  writeIds(DRAFT_KEY, next);
+  return next;
+}
+
+export function reorderInDraft(songId, direction) {
+  const ids = getDraftIds();
+  const index = ids.indexOf(songId);
+  if (index === -1) return ids;
+  const target = index + direction;
+  if (target < 0 || target >= ids.length) return ids;
+  const next = [...ids];
+  [next[index], next[target]] = [next[target], next[index]];
+  writeIds(DRAFT_KEY, next);
+  return next;
+}
+
+// --- Library helpers: the local "My Playlists" list, keyed by playlist id.
+// This is purely a per-browser bookmark list — it never affects the
+// underlying set list stored server-side, which keeps existing and stays
+// reachable by its link regardless of what's in anyone's local library. ---
+
+export function getPlaylists() {
+  return readPlaylists();
+}
+
+export function isInLibrary(id) {
+  return readPlaylists().some((p) => p.id === id);
+}
+
+export function addPlaylistToLibrary(id, name) {
+  const playlists = readPlaylists();
+  if (playlists.some((p) => p.id === id)) return playlists;
+  const next = [{ id, name }, ...playlists];
+  writePlaylists(next);
+  return next;
+}
+
+export function removePlaylistFromLibrary(id) {
+  const next = readPlaylists().filter((p) => p.id !== id);
+  writePlaylists(next);
+  return next;
+}
+
+export function updatePlaylistNameInLibrary(id, name) {
+  const next = readPlaylists().map((p) => (p.id === id ? { ...p, name } : p));
+  writePlaylists(next);
+  return next;
+}
+
+export async function saveDraftAsPlaylist(name) {
+  const songIds = getDraftIds();
+  const data = await createSetlist(songIds, name);
+  addPlaylistToLibrary(data.id, name);
+  writeIds(DRAFT_KEY, []);
+  return data.id;
 }
