@@ -326,8 +326,14 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
         shareBtn.textContent = 'Share this set';
         shareBtn.disabled = setSongs.length === 0;
         shareBtn.addEventListener('click', async () => {
-          const id = await shareSet();
-          location.href = `/set/${id}/`;
+          shareBtn.disabled = true;
+          try {
+            const id = await shareSet();
+            location.href = `/set/${id}/`;
+          } catch {
+            shareBtn.disabled = setSongs.length === 0;
+            showTransientStatus('Could not share this set — check your connection and try again.');
+          }
         });
         controlsLi.appendChild(shareBtn);
       } else {
@@ -371,8 +377,12 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
         upBtn.textContent = '↑';
         upBtn.disabled = index === 0;
         upBtn.addEventListener('click', async () => {
-          cachedSetIds = await reorderSongInSet(song.id, -1);
-          renderSetTab();
+          try {
+            cachedSetIds = await reorderSongInSet(song.id, -1);
+            renderSetTab();
+          } catch {
+            showTransientStatus('Could not save that change — check your connection and try again.');
+          }
         });
         controls.appendChild(upBtn);
 
@@ -381,8 +391,12 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
         downBtn.textContent = '↓';
         downBtn.disabled = index === setSongs.length - 1;
         downBtn.addEventListener('click', async () => {
-          cachedSetIds = await reorderSongInSet(song.id, 1);
-          renderSetTab();
+          try {
+            cachedSetIds = await reorderSongInSet(song.id, 1);
+            renderSetTab();
+          } catch {
+            showTransientStatus('Could not save that change — check your connection and try again.');
+          }
         });
         controls.appendChild(downBtn);
 
@@ -390,8 +404,12 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
         removeBtn.type = 'button';
         removeBtn.textContent = 'Remove';
         removeBtn.addEventListener('click', async () => {
-          cachedSetIds = await removeSongFromSet(song.id);
-          renderSetTab();
+          try {
+            cachedSetIds = await removeSongFromSet(song.id);
+            renderSetTab();
+          } catch {
+            showTransientStatus('Could not save that change — check your connection and try again.');
+          }
         });
         controls.appendChild(removeBtn);
 

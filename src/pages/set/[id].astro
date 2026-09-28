@@ -13,7 +13,8 @@ if (raw) {
   initialSongIds = JSON.parse(raw).songIds;
 }
 
-const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
+const songsJson = JSON.stringify(songs.map(({ id, slug, title, author }) => ({ id, slug, title, author })))
+  .replace(/</g, '\\u003c');
 ---
 <Layout title="Set List — Song Search" description="A shared, editable list of songs.">
   <div class="page">

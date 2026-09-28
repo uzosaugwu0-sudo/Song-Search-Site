@@ -38,6 +38,17 @@ export async function createSetlist(songIds) {
   return response.json();
 }
 
+// Serializes concurrent live-set read-modify-write mutations so two calls
+// (e.g. two "+" buttons clicked in quick succession) queue instead of racing
+// on a stale read.
+let mutationQueue = Promise.resolve();
+
+function enqueue(fn) {
+  const result = mutationQueue.then(fn);
+  mutationQueue = result.catch(() => {}); // don't let one failure break the queue for subsequent calls
+  return result;
+}
+
 // --- Draft-vs-live helpers, used by the home page "My Set" tab and add-to-set buttons ---
 
 export function getLiveSetId() {
@@ -65,10 +76,12 @@ export async function addSongToSet(songId) {
     writeIds(DRAFT_KEY, next);
     return next;
   }
-  const current = await getCurrentSetIds();
-  if (current.includes(songId)) return current;
-  const result = await updateSetlist(liveId, [...current, songId]);
-  return result.songIds;
+  return enqueue(async () => {
+    const current = await getCurrentSetIds();
+    if (current.includes(songId)) return current;
+    const result = await updateSetlist(liveId, [...current, songId]);
+    return result.songIds;
+  });
 }
 
 export async function removeSongFromSet(songId) {
@@ -78,26 +91,37 @@ export async function removeSongFromSet(songId) {
     writeIds(DRAFT_KEY, next);
     return next;
   }
-  const current = await getCurrentSetIds();
-  const result = await updateSetlist(liveId, current.filter((id) => id !== songId));
-  return result.songIds;
+  return enqueue(async () => {
+    const current = await getCurrentSetIds();
+    const result = await updateSetlist(liveId, current.filter((id) => id !== songId));
+    return result.songIds;
+  });
 }
 
 export async function reorderSongInSet(songId, direction) {
   const liveId = getLiveSetId();
-  const ids = liveId ? await getCurrentSetIds() : getDraftIds();
-  const index = ids.indexOf(songId);
-  if (index === -1) return ids;
-  const target = index + direction;
-  if (target < 0 || target >= ids.length) return ids;
-  const next = [...ids];
-  [next[index], next[target]] = [next[target], next[index]];
   if (!liveId) {
+    const ids = getDraftIds();
+    const index = ids.indexOf(songId);
+    if (index === -1) return ids;
+    const target = index + direction;
+    if (target < 0 || target >= ids.length) return ids;
+    const next = [...ids];
+    [next[index], next[target]] = [next[target], next[index]];
     writeIds(DRAFT_KEY, next);
     return next;
   }
-  const result = await updateSetlist(liveId, next);
-  return result.songIds;
+  return enqueue(async () => {
+    const ids = await getCurrentSetIds();
+    const index = ids.indexOf(songId);
+    if (index === -1) return ids;
+    const target = index + direction;
+    if (target < 0 || target >= ids.length) return ids;
+    const next = [...ids];
+    [next[index], next[target]] = [next[target], next[index]];
+    const result = await updateSetlist(liveId, next);
+    return result.songIds;
+  });
 }
 
 export async function shareSet() {
