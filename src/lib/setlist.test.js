@@ -8,6 +8,8 @@ import {
   prepareSongIdsForCreate,
   prepareSongIdsForUpdate,
   jsonResponse,
+  MAX_SETLIST_NAME_LENGTH,
+  prepareSetlistName,
 } from './setlist.js';
 
 test('MAX_SETLIST_SIZE is 50', () => {
@@ -42,9 +44,10 @@ test('generateSetlistId returns different values across calls', () => {
   assert.equal(ids.size, 100);
 });
 
-test('buildSetlistValue stores the song ids and an ISO timestamp', () => {
-  const value = JSON.parse(buildSetlistValue(['a', 'b']));
+test('buildSetlistValue stores the song ids, name, and an ISO timestamp', () => {
+  const value = JSON.parse(buildSetlistValue(['a', 'b'], 'Sunday Service'));
   assert.deepEqual(value.songIds, ['a', 'b']);
+  assert.equal(value.name, 'Sunday Service');
   assert.equal(new Date(value.updatedAt).toISOString(), value.updatedAt);
 });
 
@@ -100,4 +103,43 @@ test('jsonResponse sets the status, Content-Type, and Cache-Control, and seriali
 test('jsonResponse defaults to status 200', () => {
   const response = jsonResponse({ ok: true });
   assert.equal(response.status, 200);
+});
+
+test('MAX_SETLIST_NAME_LENGTH is 100', () => {
+  assert.equal(MAX_SETLIST_NAME_LENGTH, 100);
+});
+
+test('prepareSetlistName rejects an empty string', () => {
+  const result = prepareSetlistName('');
+  assert.equal(result.error, 'A set list needs a name');
+});
+
+test('prepareSetlistName rejects a whitespace-only string', () => {
+  const result = prepareSetlistName('   ');
+  assert.equal(result.error, 'A set list needs a name');
+});
+
+test('prepareSetlistName rejects non-string input', () => {
+  assert.equal(prepareSetlistName(undefined).error, 'A set list needs a name');
+  assert.equal(prepareSetlistName(null).error, 'A set list needs a name');
+  assert.equal(prepareSetlistName(42).error, 'A set list needs a name');
+});
+
+test('prepareSetlistName trims and accepts a valid name', () => {
+  const result = prepareSetlistName('  Sunday Service — Sept 28  ');
+  assert.equal(result.name, 'Sunday Service — Sept 28');
+  assert.equal(result.error, undefined);
+});
+
+test('prepareSetlistName accepts a name exactly MAX_SETLIST_NAME_LENGTH characters long', () => {
+  const name = 'a'.repeat(MAX_SETLIST_NAME_LENGTH);
+  const result = prepareSetlistName(name);
+  assert.equal(result.name, name);
+  assert.equal(result.error, undefined);
+});
+
+test('prepareSetlistName rejects a name longer than MAX_SETLIST_NAME_LENGTH characters', () => {
+  const name = 'a'.repeat(MAX_SETLIST_NAME_LENGTH + 1);
+  const result = prepareSetlistName(name);
+  assert.equal(result.error, 'A set list name can be at most 100 characters');
 });

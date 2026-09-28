@@ -1,4 +1,5 @@
 export const MAX_SETLIST_SIZE = 50;
+export const MAX_SETLIST_NAME_LENGTH = 100;
 
 export function filterValidSongIds(songIds, validIds) {
   if (!Array.isArray(songIds)) return [];
@@ -16,8 +17,19 @@ export function generateSetlistId() {
   return id;
 }
 
-export function buildSetlistValue(songIds) {
-  return JSON.stringify({ songIds, updatedAt: new Date().toISOString() });
+export function buildSetlistValue(songIds, name) {
+  return JSON.stringify({ songIds, name, updatedAt: new Date().toISOString() });
+}
+
+export function prepareSetlistName(requestedName) {
+  const name = typeof requestedName === 'string' ? requestedName.trim() : '';
+  if (name.length === 0) {
+    return { error: 'A set list needs a name' };
+  }
+  if (name.length > MAX_SETLIST_NAME_LENGTH) {
+    return { error: `A set list name can be at most ${MAX_SETLIST_NAME_LENGTH} characters` };
+  }
+  return { name };
 }
 
 export function prepareSongIdsForCreate(requestedIds, validIds) {
