@@ -1,4 +1,4 @@
-import { prepareSongIdsForUpdate, buildSetlistValue, jsonResponse } from '../../../lib/setlist.js';
+import { prepareSongIdsForUpdate, prepareSetlistName, buildSetlistValue, jsonResponse } from '../../../lib/setlist.js';
 import songs from '../../../data/songs.json';
 
 export const prerender = false;
@@ -31,12 +31,23 @@ export async function PUT({ params, request, locals }) {
     return jsonResponse({ error: 'Invalid JSON body' }, 400);
   }
 
-  const result = prepareSongIdsForUpdate(body.songIds, validSongIds);
-  if (result.error) {
-    return jsonResponse({ error: result.error }, 400);
+  const songResult = prepareSongIdsForUpdate(body.songIds, validSongIds);
+  if (songResult.error) {
+    return jsonResponse({ error: songResult.error }, 400);
   }
 
-  const value = buildSetlistValue(result.songIds);
+  let name;
+  if (body.name !== undefined) {
+    const nameResult = prepareSetlistName(body.name);
+    if (nameResult.error) {
+      return jsonResponse({ error: nameResult.error }, 400);
+    }
+    name = nameResult.name;
+  } else {
+    name = JSON.parse(existing).name;
+  }
+
+  const value = buildSetlistValue(songResult.songIds, name);
   await kv.put(params.id, value);
   return new Response(value, {
     status: 200,
