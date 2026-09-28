@@ -11,7 +11,10 @@ export async function GET({ params, locals }) {
   if (raw === null) {
     return jsonResponse({ error: 'Not found' }, 404);
   }
-  return new Response(raw, { status: 200, headers: { 'Content-Type': 'application/json' } });
+  return new Response(raw, {
+    status: 200,
+    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+  });
 }
 
 export async function PUT({ params, request, locals }) {
@@ -35,5 +38,8 @@ export async function PUT({ params, request, locals }) {
 
   const value = buildSetlistValue(result.songIds);
   await kv.put(params.id, value);
-  return new Response(value, { status: 200, headers: { 'Content-Type': 'application/json' } });
+  return new Response(value, {
+    status: 200,
+    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+  });
 }

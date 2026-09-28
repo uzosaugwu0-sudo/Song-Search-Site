@@ -89,10 +89,11 @@ test('prepareSongIdsForUpdate rejects more than MAX_SETLIST_SIZE valid ids', () 
   assert.equal(result.error, 'A set list can hold at most 50 songs');
 });
 
-test('jsonResponse sets the status and Content-Type, and serializes the body as JSON', async () => {
+test('jsonResponse sets the status, Content-Type, and Cache-Control, and serializes the body as JSON', async () => {
   const response = jsonResponse({ hello: 'world' }, 404);
   assert.equal(response.status, 404);
   assert.equal(response.headers.get('Content-Type'), 'application/json');
+  assert.equal(response.headers.get('Cache-Control'), 'no-store');
   assert.deepEqual(await response.json(), { hello: 'world' });
 });
 

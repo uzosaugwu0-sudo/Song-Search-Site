@@ -4,6 +4,8 @@ import songs from '../../data/songs.json';
 
 export const prerender = false;
 
+Astro.response.headers.set('Cache-Control', 'no-store');
+
 const { id } = Astro.params;
 const kv = Astro.locals.runtime.env.SETLISTS;
 const raw = await kv.get(id);
