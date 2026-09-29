@@ -15,7 +15,7 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
     <button type="button" class="tab active" data-tab="all">All Songs</button>
     <button type="button" class="tab" data-tab="favorites">Favorites</button>
     <button type="button" class="tab" data-tab="recent">Recently Used</button>
-    <button type="button" class="tab" data-tab="set">My Set</button>
+    <button type="button" class="tab" data-tab="set">My Playlists</button>
   </div>
 
   <p id="status"></p>
@@ -125,6 +125,24 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
       opacity: 0.5;
       cursor: default;
     }
+    .playlist-section-label {
+      grid-column: 1 / -1;
+      font-family: 'Sora', ui-sans-serif, system-ui, sans-serif;
+      font-weight: 700;
+      font-size: 0.95rem;
+      margin: 8px 0 -4px;
+      color: var(--color-muted-foreground);
+    }
+    .playlist-name-input {
+      flex: 1;
+      min-width: 200px;
+      padding: 10px 14px;
+      border: 1px solid var(--color-border);
+      border-radius: 10px;
+      background: var(--color-card);
+      color: var(--color-card-foreground);
+      font-size: 0.9rem;
+    }
     .set-song-row {
       grid-column: 1 / -1;
       display: flex;
@@ -219,7 +237,7 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
   <script type="application/json" id="songs-data" set:html={songsJson} />
   <script>
     import { normalizeTitle } from '../lib/normalize.js';
-    import { addSongToSet, removeSongFromSet, reorderSongInSet, getLiveSetId, getCurrentSetIds, shareSet, startNewSet } from '../lib/setlist-client.js';
+    import { addToDraft, removeFromDraft, reorderInDraft, getDraftIds, getPlaylists, removePlaylistFromLibrary, saveDraftAsPlaylist } from '../lib/setlist-client.js';
 
     const data = JSON.parse(document.getElementById('songs-data').textContent);
     const input = document.getElementById('search');
@@ -236,7 +254,8 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
     const tabButtons = Array.from(tabs.querySelectorAll('.tab'));
     let currentTab = 'all';
     let selectedIndex = -1;
-    let cachedSetIds = [];
+    let cachedPlaylists = [];
+    let draftNameValue = '';
 
     function getFavorites() {
       try { return JSON.parse(localStorage.getItem('songSearchFavorites') || '[]'); }
@@ -253,16 +272,16 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
     function updateTabLabels() {
       const favCount = getFavorites().length;
       const recentCount = getRecent().length;
-      const setCount = cachedSetIds.length;
+      const playlistCount = cachedPlaylists.length;
       for (const btn of tabButtons) {
         const type = btn.dataset.tab;
         const label = type === 'all' ? 'All Songs'
           : type === 'favorites' ? 'Favorites'
           : type === 'recent' ? 'Recently Used'
-          : 'My Set';
+          : 'My Playlists';
         const count = type === 'favorites' ? favCount
           : type === 'recent' ? recentCount
-          : type === 'set' ? setCount
+          : type === 'set' ? playlistCount
           : null;
         btn.textContent = count ? `${label} (${count})` : label;
       }
@@ -300,128 +319,160 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
       for (const song of recentSongs) results.appendChild(buildCard(song, ''));
     }
 
-    async function renderSetTab() {
+    function buildPlaylistSongRow(song, { showUp, showDown, onUp, onDown, onRemove }) {
+      const li = document.createElement('li');
+      li.className = 'set-song-row';
+
+      const link = document.createElement('a');
+      link.href = `/song/${song.slug}/`;
+      link.textContent = song.title;
+      li.appendChild(link);
+
+      if (song.author) {
+        const author = document.createElement('span');
+        author.className = 'result-author';
+        author.textContent = song.author;
+        li.appendChild(author);
+      }
+
+      const controls = document.createElement('span');
+      controls.className = 'row-controls';
+
+      const upBtn = document.createElement('button');
+      upBtn.type = 'button';
+      upBtn.textContent = '↑';
+      upBtn.disabled = !showUp;
+      upBtn.addEventListener('click', onUp);
+      controls.appendChild(upBtn);
+
+      const downBtn = document.createElement('button');
+      downBtn.type = 'button';
+      downBtn.textContent = '↓';
+      downBtn.disabled = !showDown;
+      downBtn.addEventListener('click', onDown);
+      controls.appendChild(downBtn);
+
+      const removeBtn = document.createElement('button');
+      removeBtn.type = 'button';
+      removeBtn.textContent = 'Remove';
+      removeBtn.addEventListener('click', onRemove);
+      controls.appendChild(removeBtn);
+
+      li.appendChild(controls);
+      return li;
+    }
+
+    function renderPlaylistsTab() {
       showTabs();
       pagination.style.display = 'none';
       results.replaceChildren();
       selectedIndex = -1;
 
-      cachedSetIds = await getCurrentSetIds();
+      cachedPlaylists = getPlaylists();
       updateTabLabels();
 
-      const setSongs = cachedSetIds.map((id) => songById.get(id)).filter(Boolean);
+      const draftIds = getDraftIds();
+      const draftSongs = draftIds.map((id) => songById.get(id)).filter(Boolean);
 
-      if (setSongs.length === 0) {
-        status.textContent = 'No songs in your set yet — use the + button on any song to add one.';
+      if (draftSongs.length === 0 && cachedPlaylists.length === 0) {
+        status.textContent = 'No songs in your draft yet — use the + button on any song to add one.';
       } else {
-        status.textContent = `${setSongs.length} song${setSongs.length === 1 ? '' : 's'} in your set`;
+        status.textContent = `${draftSongs.length} song${draftSongs.length === 1 ? '' : 's'} in your current draft`;
       }
+
+      const buildingLabel = document.createElement('li');
+      buildingLabel.className = 'playlist-section-label';
+      buildingLabel.textContent = 'Currently building';
+      results.appendChild(buildingLabel);
 
       const controlsLi = document.createElement('li');
       controlsLi.className = 'set-controls';
 
-      if (!getLiveSetId()) {
-        const shareBtn = document.createElement('button');
-        shareBtn.type = 'button';
-        shareBtn.textContent = 'Share this set';
-        shareBtn.disabled = setSongs.length === 0;
-        shareBtn.addEventListener('click', async () => {
-          shareBtn.disabled = true;
-          try {
-            const id = await shareSet();
-            location.href = `/set/${id}/`;
-          } catch {
-            shareBtn.disabled = setSongs.length === 0;
-            showTransientStatus('Could not share this set — check your connection and try again.');
-          }
-        });
-        controlsLi.appendChild(shareBtn);
-      } else {
-        const newBtn = document.createElement('button');
-        newBtn.type = 'button';
-        newBtn.textContent = 'Start a new set';
-        newBtn.addEventListener('click', () => {
-          startNewSet();
-          renderSetTab();
-        });
-        controlsLi.appendChild(newBtn);
+      const nameInput = document.createElement('input');
+      nameInput.type = 'text';
+      nameInput.placeholder = 'Name this playlist (e.g. Sunday Service — Sept 28)';
+      nameInput.className = 'playlist-name-input';
+      nameInput.value = draftNameValue;
 
-        const viewLink = document.createElement('a');
-        viewLink.href = `/set/${getLiveSetId()}/`;
-        viewLink.textContent = 'Open shared set list';
-        controlsLi.appendChild(viewLink);
+      const saveBtn = document.createElement('button');
+      saveBtn.type = 'button';
+      saveBtn.textContent = 'Save';
+
+      function updateSaveDisabled() {
+        saveBtn.disabled = draftSongs.length === 0 || nameInput.value.trim().length === 0;
       }
+      updateSaveDisabled();
+
+      nameInput.addEventListener('input', () => {
+        draftNameValue = nameInput.value;
+        updateSaveDisabled();
+      });
+
+      saveBtn.addEventListener('click', async () => {
+        saveBtn.disabled = true;
+        try {
+          await saveDraftAsPlaylist(nameInput.value.trim());
+          draftNameValue = '';
+          renderPlaylistsTab();
+        } catch {
+          updateSaveDisabled();
+          showTransientStatus('Could not save this playlist — check your connection and try again.');
+        }
+      });
+
+      controlsLi.appendChild(nameInput);
+      controlsLi.appendChild(saveBtn);
       results.appendChild(controlsLi);
 
-      setSongs.forEach((song, index) => {
-        const li = document.createElement('li');
-        li.className = 'set-song-row';
-
-        const link = document.createElement('a');
-        link.href = `/song/${song.slug}/`;
-        link.textContent = song.title;
-        li.appendChild(link);
-
-        if (song.author) {
-          const author = document.createElement('span');
-          author.className = 'result-author';
-          author.textContent = song.author;
-          li.appendChild(author);
-        }
-
-        const controls = document.createElement('span');
-        controls.className = 'row-controls';
-
-        const upBtn = document.createElement('button');
-        upBtn.type = 'button';
-        upBtn.textContent = '↑';
-        upBtn.disabled = index === 0;
-        upBtn.addEventListener('click', async () => {
-          try {
-            cachedSetIds = await reorderSongInSet(song.id, -1);
-            renderSetTab();
-          } catch {
-            showTransientStatus('Could not save that change — check your connection and try again.');
-          }
+      draftSongs.forEach((song, index) => {
+        const li = buildPlaylistSongRow(song, {
+          showUp: index > 0,
+          showDown: index < draftSongs.length - 1,
+          onUp: () => { reorderInDraft(song.id, -1); renderPlaylistsTab(); },
+          onDown: () => { reorderInDraft(song.id, 1); renderPlaylistsTab(); },
+          onRemove: () => { removeFromDraft(song.id); renderPlaylistsTab(); },
         });
-        controls.appendChild(upBtn);
-
-        const downBtn = document.createElement('button');
-        downBtn.type = 'button';
-        downBtn.textContent = '↓';
-        downBtn.disabled = index === setSongs.length - 1;
-        downBtn.addEventListener('click', async () => {
-          try {
-            cachedSetIds = await reorderSongInSet(song.id, 1);
-            renderSetTab();
-          } catch {
-            showTransientStatus('Could not save that change — check your connection and try again.');
-          }
-        });
-        controls.appendChild(downBtn);
-
-        const removeBtn = document.createElement('button');
-        removeBtn.type = 'button';
-        removeBtn.textContent = 'Remove';
-        removeBtn.addEventListener('click', async () => {
-          try {
-            cachedSetIds = await removeSongFromSet(song.id);
-            renderSetTab();
-          } catch {
-            showTransientStatus('Could not save that change — check your connection and try again.');
-          }
-        });
-        controls.appendChild(removeBtn);
-
-        li.appendChild(controls);
         results.appendChild(li);
       });
+
+      const libraryLabel = document.createElement('li');
+      libraryLabel.className = 'playlist-section-label';
+      libraryLabel.textContent = 'Your Playlists';
+      results.appendChild(libraryLabel);
+
+      if (cachedPlaylists.length === 0) {
+        const emptyLi = document.createElement('li');
+        emptyLi.className = 'set-controls';
+        emptyLi.textContent = "You haven't saved any playlists yet.";
+        results.appendChild(emptyLi);
+      } else {
+        for (const playlist of cachedPlaylists) {
+          const li = document.createElement('li');
+          li.className = 'set-controls';
+
+          const link = document.createElement('a');
+          link.href = `/set/${playlist.id}/`;
+          link.textContent = playlist.name;
+          li.appendChild(link);
+
+          const removeBtn = document.createElement('button');
+          removeBtn.type = 'button';
+          removeBtn.textContent = 'Remove';
+          removeBtn.addEventListener('click', () => {
+            removePlaylistFromLibrary(playlist.id);
+            renderPlaylistsTab();
+          });
+          li.appendChild(removeBtn);
+
+          results.appendChild(li);
+        }
+      }
     }
 
     function renderCurrentTab() {
       if (currentTab === 'favorites') renderFavoritesTab();
       else if (currentTab === 'recent') renderRecentTab();
-      else if (currentTab === 'set') renderSetTab();
+      else if (currentTab === 'set') renderPlaylistsTab();
       else renderBrowse(1);
     }
 
@@ -533,17 +584,12 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
       addBtn.className = 'add-to-set-btn';
       addBtn.title = 'Add to set';
       addBtn.textContent = '+';
-      addBtn.addEventListener('click', async (e) => {
+      addBtn.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        try {
-          cachedSetIds = await addSongToSet(song.id);
-          updateTabLabels();
-          showTransientStatus(`Added "${song.title}" to your set`);
-          if (currentTab === 'set') renderSetTab();
-        } catch {
-          showTransientStatus('Could not add that song — check your connection.');
-        }
+        addToDraft(song.id);
+        showTransientStatus(`Added "${song.title}" to your draft`);
+        if (currentTab === 'set') renderPlaylistsTab();
       });
       li.appendChild(addBtn);
 
@@ -721,11 +767,8 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
       }
     });
 
+    cachedPlaylists = getPlaylists();
     updateTabLabels();
-    getCurrentSetIds().then((ids) => {
-      cachedSetIds = ids;
-      updateTabLabels();
-    });
 
     const params = new URLSearchParams(location.search);
     const initialQuery = params.get('q') || '';
