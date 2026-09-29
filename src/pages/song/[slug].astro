@@ -180,21 +180,15 @@ const description = firstLine.length > 140 ? `${firstLine.slice(0, 140)}…` : f
   </script>
 
   <script>
-    import { addSongToSet } from '../../lib/setlist-client.js';
+    import { addToDraft } from '../../lib/setlist-client.js';
 
     const addToSetBtn = document.getElementById('add-to-set');
     const addToSetDefaultText = addToSetBtn.textContent;
-    addToSetBtn.addEventListener('click', async () => {
-      addToSetBtn.disabled = true;
-      try {
-        await addSongToSet(addToSetBtn.dataset.songId);
-        addToSetBtn.textContent = 'Added!';
-      } catch {
-        addToSetBtn.textContent = 'Failed — try again';
-      }
+    addToSetBtn.addEventListener('click', () => {
+      addToDraft(addToSetBtn.dataset.songId);
+      addToSetBtn.textContent = 'Added!';
       setTimeout(() => {
         addToSetBtn.textContent = addToSetDefaultText;
-        addToSetBtn.disabled = false;
       }, 1500);
     });
   </script>
