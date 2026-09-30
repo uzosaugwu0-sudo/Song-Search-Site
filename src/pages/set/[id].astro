@@ -11,14 +11,17 @@ const kv = Astro.locals.runtime.env.SETLISTS;
 const raw = await kv.get(id);
 
 let initialSongIds = [];
+let initialName = 'Untitled Set';
 if (raw) {
-  initialSongIds = JSON.parse(raw).songIds;
+  const data = JSON.parse(raw);
+  initialSongIds = data.songIds;
+  initialName = data.name || 'Untitled Set';
 }
 
 const songsJson = JSON.stringify(songs.map(({ id, slug, title, author }) => ({ id, slug, title, author })))
   .replace(/</g, '\\u003c');
 ---
-<Layout title="Set List — Song Search" description="A shared, editable list of songs.">
+<Layout title={raw === null ? 'Set List — Song Search' : `${initialName} — Song Search`} description="A shared, editable list of songs.">
   <div class="page">
     <p><a href="/">← Back to search</a></p>
 
@@ -29,9 +32,14 @@ const songsJson = JSON.stringify(songs.map(({ id, slug, title, author }) => ({ i
       </div>
     ) : (
       <div id="set-app">
-        <h1>Set List</h1>
+        <h1>
+          <span id="playlist-name">{initialName}</span>
+          <input type="text" id="rename-input" value={initialName} hidden />
+        </h1>
         <div class="actions">
+          <button id="rename-btn">Rename</button>
           <button id="copy-link">Copy link</button>
+          <button id="save-to-library">Save to My Playlists</button>
         </div>
         <p id="status"></p>
         <ul id="set-songs"></ul>
@@ -68,6 +76,16 @@ const songsJson = JSON.stringify(songs.map(({ id, slug, title, author }) => ({ i
       transition: opacity 150ms ease;
     }
     #copy-link:hover { opacity: 0.85; }
+    #rename-input {
+      font-family: 'Sora', ui-sans-serif, system-ui, sans-serif;
+      font-weight: 800;
+      font-size: 1.5rem;
+      border: 1px solid var(--color-border);
+      border-radius: 8px;
+      padding: 4px 8px;
+      width: 100%;
+      max-width: 400px;
+    }
     #set-songs, #add-results {
       list-style: none;
       margin: 0;
@@ -132,17 +150,18 @@ const songsJson = JSON.stringify(songs.map(({ id, slug, title, author }) => ({ i
   </style>
 
   <script type="application/json" id="songs-data" set:html={songsJson} />
-  <script type="application/json" id="set-init-data" set:html={JSON.stringify({ setId: id, initialSongIds })} />
+  <script type="application/json" id="set-init-data" set:html={JSON.stringify({ setId: id, initialSongIds, initialName })} />
   <script>
-    import { updateSetlist } from '../../lib/setlist-client.js';
+    import { updateSetlist, isInLibrary, addPlaylistToLibrary, updatePlaylistNameInLibrary } from '../../lib/setlist-client.js';
 
     const setSongsList = document.getElementById('set-songs');
 
     if (setSongsList) {
       const data = JSON.parse(document.getElementById('songs-data').textContent);
       const songById = new Map(data.map((song) => [song.id, song]));
-      const { setId, initialSongIds } = JSON.parse(document.getElementById('set-init-data').textContent);
+      const { setId, initialSongIds, initialName } = JSON.parse(document.getElementById('set-init-data').textContent);
       let currentIds = initialSongIds;
+      let currentName = initialName;
       const statusEl = document.getElementById('status');
 
       function renderSetSongs() {
@@ -228,6 +247,61 @@ const songsJson = JSON.stringify(songs.map(({ id, slug, title, author }) => ({ i
       }
 
       renderSetSongs();
+
+      const nameSpan = document.getElementById('playlist-name');
+      const renameInput = document.getElementById('rename-input');
+      const renameBtn = document.getElementById('rename-btn');
+
+      renameBtn.addEventListener('click', () => {
+        if (renameInput.hidden) {
+          renameInput.value = currentName;
+          nameSpan.hidden = true;
+          renameInput.hidden = false;
+          renameInput.focus();
+          renameInput.select();
+          renameBtn.textContent = 'Save name';
+          return;
+        }
+
+        const newName = renameInput.value.trim();
+        if (!newName) {
+          statusEl.textContent = 'A playlist needs a name.';
+          return;
+        }
+        renameBtn.disabled = true;
+        updateSetlist(setId, currentIds, newName)
+          .then(() => {
+            currentName = newName;
+            nameSpan.textContent = currentName;
+            if (isInLibrary(setId)) updatePlaylistNameInLibrary(setId, currentName);
+            document.title = `${currentName} — Song Search`;
+            nameSpan.hidden = false;
+            renameInput.hidden = true;
+            renameBtn.textContent = 'Rename';
+          })
+          .catch(() => {
+            statusEl.textContent = 'Could not save the new name. Check your connection and try again.';
+          })
+          .finally(() => {
+            renameBtn.disabled = false;
+          });
+      });
+
+      const saveToLibraryBtn = document.getElementById('save-to-library');
+      function updateSaveToLibraryButton() {
+        if (isInLibrary(setId)) {
+          saveToLibraryBtn.textContent = '✓ Saved';
+          saveToLibraryBtn.disabled = true;
+        } else {
+          saveToLibraryBtn.textContent = 'Save to My Playlists';
+          saveToLibraryBtn.disabled = false;
+        }
+      }
+      updateSaveToLibraryButton();
+      saveToLibraryBtn.addEventListener('click', () => {
+        addPlaylistToLibrary(setId, currentName);
+        updateSaveToLibraryButton();
+      });
 
       const addInput = document.getElementById('add-search');
       const addResults = document.getElementById('add-results');
