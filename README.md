@@ -37,7 +37,8 @@ the playlist, so the link keeps working for anyone who has it.
 ## Develop
 
     npm install
-    npm run import   # data/Songs.db + data/SongWords.db -> src/data/songs.json
+    npm run import         # data/Songs.db + data/SongWords.db -> src/data/songs.json
+    npm run seed-local-kv  # loads src/data/songs.json into local KV, so `dev` has data to read
     npm run dev
 
 ## Build

@@ -8,6 +8,7 @@
   },
   "scripts": {
     "import": "node scripts/import-db.js",
+    "seed-local-kv": "wrangler kv key put --binding=SONGS_DATA --local songs --path=src/data/songs.json",
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
