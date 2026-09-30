@@ -68,6 +68,20 @@ test('parseSongDatabases reports a song with empty lyrics', async () => {
   assert.match(result.details[0], /Blank Song/);
 });
 
+test('parseSongDatabases returns an error instead of throwing when tables are missing (schema mismatch)', async () => {
+  const SQL = await initSqlJs();
+  const songsDbBytes = await buildFixtureDbBytes((db) => {
+    db.run('CREATE TABLE wrong_table (x INT)');
+  });
+  const wordsDbBytes = await buildFixtureDbBytes((db) => {
+    db.run('CREATE TABLE wrong_table (x INT)');
+  });
+
+  const result = parseSongDatabases(SQL, songsDbBytes, wordsDbBytes);
+  assert.match(result.error, /not a ProPresenter song database/);
+  assert.deepEqual(result.details, []);
+});
+
 test('parseSongDatabases decodes BLOB words instead of treating them as empty', async () => {
   const SQL = await initSqlJs();
   const songsDbBytes = await buildFixtureDbBytes((db) => {

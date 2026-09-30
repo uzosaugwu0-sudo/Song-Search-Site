@@ -110,7 +110,7 @@ const backups = backupTimestampsFromListing(listing.objects.map((o) => o.key))
       uploadStatus.textContent = 'Uploading…';
       try {
         const res = await fetch('/api/admin/upload', { method: 'POST', body: formData });
-        const data = await res.json();
+        const data = await res.json().catch(() => ({ error: 'Upload failed (server error).' }));
         if (!res.ok) {
           const details = Array.isArray(data.details) && data.details.length > 0
             ? '\n' + data.details.map((d) => `- ${d}`).join('\n')
@@ -136,7 +136,7 @@ const backups = backupTimestampsFromListing(listing.objects.map((o) => o.key))
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ timestamp }),
           });
-          const data = await res.json();
+          const data = await res.json().catch(() => ({ error: 'Restore failed (server error).' }));
           if (!res.ok) {
             uploadStatus.textContent = data.error;
             return;

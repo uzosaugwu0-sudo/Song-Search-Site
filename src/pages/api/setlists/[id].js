@@ -1,9 +1,7 @@
 import { prepareSongIdsForUpdate, prepareSetlistName, buildSetlistValue, jsonResponse } from '../../../lib/setlist.js';
-import songs from '../../../data/songs.json';
+import { loadSongs } from '../../../lib/songs-data.js';
 
 export const prerender = false;
-
-const validSongIds = new Set(songs.map((s) => s.id));
 
 export async function GET({ params, locals }) {
   const kv = locals.runtime.env.SETLISTS;
@@ -31,6 +29,7 @@ export async function PUT({ params, request, locals }) {
     return jsonResponse({ error: 'Invalid JSON body' }, 400);
   }
 
+  const validSongIds = new Set((await loadSongs(locals.runtime.env.SONGS_DATA)).map((s) => s.id));
   const songResult = prepareSongIdsForUpdate(body.songIds, validSongIds);
   if (songResult.error) {
     return jsonResponse({ error: songResult.error }, 400);

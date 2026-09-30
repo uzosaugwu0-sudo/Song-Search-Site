@@ -77,6 +77,13 @@ These are one-time setup steps, already run for this project's Cloudflare
 account. To rotate the admin password, run `npx wrangler secret put
 ADMIN_PASSWORD` and enter a new value.
 
+On first deploy, `SONGS_DATA` is empty and the site will show no songs until
+someone logs into `/admin/` and uploads a database. To avoid a blank-looking
+site in the gap between deploying and that first upload, pre-seed production
+KV before deploying: `npx wrangler kv key put --binding=SONGS_DATA --remote
+songs --path=src/data/songs.json` (requires `src/data/songs.json` to exist
+locally — run `npm run import` first if needed).
+
 ## Deployment
 
 - Build command: `npm run import && npm run build`

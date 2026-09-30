@@ -1,6 +1,6 @@
 ---
 import Layout from '../../layouts/Layout.astro';
-import songs from '../../data/songs.json';
+import { loadSongs } from '../../lib/songs-data.js';
 
 export const prerender = false;
 
@@ -9,6 +9,7 @@ Astro.response.headers.set('Cache-Control', 'no-store');
 const { id } = Astro.params;
 const kv = Astro.locals.runtime.env.SETLISTS;
 const raw = await kv.get(id);
+const songs = await loadSongs(Astro.locals.runtime.env.SONGS_DATA);
 
 let initialSongIds = [];
 let initialName = 'Untitled Set';

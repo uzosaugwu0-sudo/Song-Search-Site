@@ -17,6 +17,11 @@ export function parseSongDatabases(SQL, songsDbBytes, wordsDbBytes) {
   try {
     songResult = songsDb.exec('SELECT rowid AS rowid, song_uid, title, author FROM song')[0];
     wordResult = wordsDb.exec('SELECT song_id, words FROM word')[0];
+  } catch {
+    return {
+      error: 'Songs.db / SongWords.db is not a ProPresenter song database (expected a "song" and "word" table) — check you selected the right file in each field.',
+      details: [],
+    };
   } finally {
     songsDb.close();
     wordsDb.close();
