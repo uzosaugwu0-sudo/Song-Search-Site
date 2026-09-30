@@ -1,10 +1,11 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import songs from '../data/songs.json';
+import { loadSongs } from '../lib/songs-data.js';
 import { findDuplicateGroups } from '../lib/duplicate-groups.js';
 
-export const prerender = true;
+export const prerender = false;
 
+const songs = await loadSongs(Astro.locals.runtime.env.SONGS_DATA);
 const duplicateGroups = findDuplicateGroups(songs);
 const totalDuplicateSongs = duplicateGroups.reduce((sum, group) => sum + group.length, 0);
 ---

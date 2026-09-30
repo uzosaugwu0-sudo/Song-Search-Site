@@ -1,9 +1,10 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import songs from '../data/songs.json';
+import { loadSongs } from '../lib/songs-data.js';
 
-export const prerender = true;
+export const prerender = false;
 
+const songs = await loadSongs(Astro.locals.runtime.env.SONGS_DATA);
 const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
 ---
 <Layout title="Wisdom Assembly Song Search">

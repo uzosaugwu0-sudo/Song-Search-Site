@@ -1,27 +1,30 @@
 ---
 import Layout from '../../layouts/Layout.astro';
-import songs from '../../data/songs.json';
+import { loadSongs } from '../../lib/songs-data.js';
 
-export const prerender = true;
+export const prerender = false;
 
-export function getStaticPaths() {
-  return songs.map((song) => ({
-    params: { slug: song.slug },
-    props: { song },
-  }));
-}
-
-const { song } = Astro.props;
+const songs = await loadSongs(Astro.locals.runtime.env.SONGS_DATA);
+const song = songs.find((s) => s.slug === Astro.params.slug);
 
 const LABEL_RE = /^\[?(verse|chorus|bridge|pre-?chorus|tag|ending|outro|intro|refrain|interlude)\s*\d*\]?:?$/i;
 
-const stanzas = song.lyrics
-  .split(/\n\s*\n/)
-  .map((stanza) => stanza.split('\n').filter((line) => line.trim()));
+const stanzas = song
+  ? song.lyrics.split(/\n\s*\n/).map((stanza) => stanza.split('\n').filter((line) => line.trim()))
+  : [];
 
-const firstLine = stanzas.flat().find((line) => !LABEL_RE.test(line.trim())) ?? song.title;
-const description = firstLine.length > 140 ? `${firstLine.slice(0, 140)}…` : firstLine;
+const firstLine = song ? stanzas.flat().find((line) => !LABEL_RE.test(line.trim())) ?? song.title : '';
+const description = song
+  ? (firstLine.length > 140 ? `${firstLine.slice(0, 140)}…` : firstLine)
+  : undefined;
 ---
+{!song ? (
+  <Layout title="Song not found">
+    <h1>Song not found</h1>
+    <p>We couldn't find that song.</p>
+    <p><a href="/">← Back to search</a></p>
+  </Layout>
+) : (
 <Layout title={`${song.title} — Song Search`} description={description}>
   <div class="page">
     <p><a href="/" id="back-link">← Back to search</a></p>
@@ -193,3 +196,4 @@ const description = firstLine.length > 140 ? `${firstLine.slice(0, 140)}…` : f
     });
   </script>
 </Layout>
+)}
