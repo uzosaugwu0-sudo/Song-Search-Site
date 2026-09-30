@@ -20,6 +20,8 @@ if (raw) {
 
 const songsJson = JSON.stringify(songs.map(({ id, slug, title, author }) => ({ id, slug, title, author })))
   .replace(/</g, '\\u003c');
+const setInitJson = JSON.stringify({ setId: id, initialSongIds, initialName })
+  .replace(/</g, '\\u003c');
 ---
 <Layout title={raw === null ? 'Set List — Song Search' : `${initialName} — Song Search`} description="A shared, editable list of songs.">
   <div class="page">
@@ -150,7 +152,7 @@ const songsJson = JSON.stringify(songs.map(({ id, slug, title, author }) => ({ i
   </style>
 
   <script type="application/json" id="songs-data" set:html={songsJson} />
-  <script type="application/json" id="set-init-data" set:html={JSON.stringify({ setId: id, initialSongIds, initialName })} />
+  <script type="application/json" id="set-init-data" set:html={setInitJson} />
   <script>
     import { updateSetlist, isInLibrary, addPlaylistToLibrary, updatePlaylistNameInLibrary } from '../../lib/setlist-client.js';
 
@@ -279,8 +281,8 @@ const songsJson = JSON.stringify(songs.map(({ id, slug, title, author }) => ({ i
             renameInput.hidden = true;
             renameBtn.textContent = 'Rename';
           })
-          .catch(() => {
-            statusEl.textContent = 'Could not save the new name. Check your connection and try again.';
+          .catch((err) => {
+            statusEl.textContent = err.message || 'Could not save the new name. Check your connection and try again.';
           })
           .finally(() => {
             renameBtn.disabled = false;

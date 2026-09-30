@@ -34,7 +34,10 @@ export async function updateSetlist(id, songIds, name) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   });
-  if (!response.ok) throw new Error('Failed to update set list');
+  if (!response.ok) {
+    const data = await response.json().catch(() => null);
+    throw new Error(data?.error || 'Failed to update set list');
+  }
   return response.json();
 }
 
@@ -44,7 +47,10 @@ export async function createSetlist(songIds, name) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ songIds, name }),
   });
-  if (!response.ok) throw new Error('Failed to create set list');
+  if (!response.ok) {
+    const data = await response.json().catch(() => null);
+    throw new Error(data?.error || 'Failed to create set list');
+  }
   return response.json();
 }
 

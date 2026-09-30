@@ -392,6 +392,7 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
       nameInput.type = 'text';
       nameInput.placeholder = 'Name this playlist (e.g. Sunday Service — Sept 28)';
       nameInput.className = 'playlist-name-input';
+      nameInput.maxLength = 100;
       nameInput.value = draftNameValue;
 
       const saveBtn = document.createElement('button');
@@ -414,9 +415,9 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
           await saveDraftAsPlaylist(nameInput.value.trim());
           draftNameValue = '';
           renderPlaylistsTab();
-        } catch {
+        } catch (err) {
           updateSaveDisabled();
-          showTransientStatus('Could not save this playlist — check your connection and try again.');
+          showTransientStatus(err.message || 'Could not save this playlist — check your connection and try again.');
         }
       });
 
