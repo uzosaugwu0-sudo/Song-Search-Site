@@ -47,16 +47,35 @@ the playlist, so the link keeps working for anyone who has it.
 
 ## Update the song database
 
-Replace `data/Songs.db` and `data/SongWords.db` with fresh ProPresenter
-exports, commit, and push, then deploy manually — see
-[Deployment](#deployment) below.
+The song database is updated through the admin panel at `/admin/` — log in
+with the shared admin password, upload `Songs.db` and `SongWords.db`, and
+the site updates immediately, no redeploy needed. See
+[`HOW-TO-UPDATE-SONGS.md`](HOW-TO-UPDATE-SONGS.md) for the non-technical
+version of these steps.
 
-For a non-technical, no-git-required version of this (drag-and-drop via
-GitHub's web UI), see [`HOW-TO-UPDATE-SONGS.md`](HOW-TO-UPDATE-SONGS.md).
+The two files in `data/` and `npm run import` remain useful for local
+development (see [Develop](#develop) above) but are no longer how
+production data gets updated.
 
 After updating, check `/duplicates/` on the live site for a report of songs
 that may be duplicates (same title once case/punctuation/spacing are
-ignored) — it's not linked from the home page, so visit it directly.
+ignored) — it's not linked from the home page, so visit it directly. The
+admin panel also shows a duplicate-group count right after each upload.
+
+## Admin panel setup
+
+The admin panel needs three Cloudflare resources beyond the ones this repo
+already uses (see [Deployment](#deployment) for the base setup):
+
+- Two KV namespaces, bound as `SONGS_DATA` and `ADMIN_RATE_LIMIT`
+- One R2 bucket, bound as `SONG_DB_FILES`
+- Two Worker secrets, `ADMIN_PASSWORD` (the shared dev-team login) and
+  `ADMIN_SESSION_SECRET` (a long random string used to sign session
+  cookies — not something anyone types in day-to-day)
+
+These are one-time setup steps, already run for this project's Cloudflare
+account. To rotate the admin password, run `npx wrangler secret put
+ADMIN_PASSWORD` and enter a new value.
 
 ## Deployment
 
