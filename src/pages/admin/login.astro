@@ -1,0 +1,62 @@
+---
+import Layout from '../../layouts/Layout.astro';
+
+export const prerender = false;
+---
+<Layout title="Admin Login — Song Search">
+  <div class="page">
+    <h1>Admin Login</h1>
+    <form id="login-form">
+      <input type="password" id="password" placeholder="Password" autofocus required />
+      <button type="submit">Log in</button>
+    </form>
+    <p id="status"></p>
+  </div>
+
+  <style>
+    .page { max-width: 420px; margin: 60px auto 0; }
+    #login-form { display: flex; gap: 10px; }
+    #password {
+      flex: 1;
+      padding: 12px 14px;
+      border: 1px solid var(--color-border);
+      border-radius: 12px;
+      background: var(--color-card);
+      color: var(--color-card-foreground);
+    }
+    button {
+      background: var(--color-primary);
+      color: var(--color-on-primary);
+      border: none;
+      border-radius: 12px;
+      padding: 12px 20px;
+      cursor: pointer;
+    }
+    #status { color: var(--color-muted-foreground); margin-top: 12px; white-space: pre-line; }
+  </style>
+
+  <script>
+    const form = document.getElementById('login-form');
+    const status = document.getElementById('status');
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const password = document.getElementById('password').value;
+      status.textContent = 'Logging in…';
+      try {
+        const res = await fetch('/api/admin/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password }),
+        });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          status.textContent = data.error || 'Login failed';
+          return;
+        }
+        window.location.href = '/admin/';
+      } catch {
+        status.textContent = 'Could not reach the server. Check your connection and try again.';
+      }
+    });
+  </script>
+</Layout>
