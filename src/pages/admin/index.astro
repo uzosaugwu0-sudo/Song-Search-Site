@@ -1,0 +1,157 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { requireAdminSession } from '../../lib/admin-auth.js';
+import { backupTimestampsFromListing, formatBackupLabel } from '../../lib/r2-backup.js';
+
+export const prerender = false;
+
+const env = Astro.locals.runtime.env;
+const authed = await requireAdminSession(Astro.request, env);
+if (!authed) {
+  return Astro.redirect('/admin/login');
+}
+
+const metaObj = await env.SONG_DB_FILES.get('current/meta.json');
+const meta = metaObj ? JSON.parse(await metaObj.text()) : null;
+
+const listing = await env.SONG_DB_FILES.list({ prefix: 'backups/' });
+const backups = backupTimestampsFromListing(listing.objects.map((o) => o.key))
+  .map((timestamp) => ({ timestamp, label: formatBackupLabel(timestamp) }));
+---
+<Layout title="Admin — Song Search">
+  <div class="page">
+    <p><a href="/">← Back to search</a></p>
+    <h1>Admin</h1>
+
+    <section class="status-box">
+      {meta ? (
+        <p>{meta.songCount} songs live. Last updated {new Date(meta.uploadedAt).toLocaleString()}.</p>
+      ) : (
+        <p>No database uploaded yet.</p>
+      )}
+    </section>
+
+    <section>
+      <h2>Upload new database</h2>
+      <form id="upload-form">
+        <label>Songs.db <input type="file" id="songs-file" accept=".db" required /></label>
+        <label>SongWords.db <input type="file" id="words-file" accept=".db" required /></label>
+        <button type="submit">Upload</button>
+      </form>
+      <p id="upload-status"></p>
+    </section>
+
+    <section>
+      <h2>Backup history</h2>
+      {backups.length === 0 ? (
+        <p class="status">No backups yet.</p>
+      ) : (
+        <ul id="backup-list">
+          {backups.map(({ timestamp, label }) => (
+            <li>
+              <span>{label}</span>
+              <button type="button" class="restore-btn" data-timestamp={timestamp}>Restore</button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+
+    <button id="logout-btn" type="button">Log out</button>
+  </div>
+
+  <style>
+    .page { max-width: 680px; margin: 0 auto; }
+    section { margin-bottom: 32px; }
+    .status-box {
+      padding: 16px 20px;
+      background: var(--color-card);
+      border: 1px solid var(--color-border);
+      border-radius: 14px;
+    }
+    #upload-form { display: flex; flex-direction: column; gap: 12px; align-items: flex-start; }
+    #upload-status { white-space: pre-line; color: var(--color-muted-foreground); }
+    #backup-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+    #backup-list li {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 14px;
+      background: var(--color-card);
+      border: 1px solid var(--color-border);
+      border-radius: 10px;
+    }
+    button {
+      background: var(--color-primary);
+      color: var(--color-on-primary);
+      border: none;
+      border-radius: 10px;
+      padding: 8px 16px;
+      cursor: pointer;
+    }
+    #logout-btn {
+      background: var(--color-card);
+      color: var(--color-card-foreground);
+      border: 1px solid var(--color-border);
+    }
+  </style>
+
+  <script>
+    const uploadForm = document.getElementById('upload-form');
+    const uploadStatus = document.getElementById('upload-status');
+
+    uploadForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const songsFile = document.getElementById('songs-file').files[0];
+      const wordsFile = document.getElementById('words-file').files[0];
+      const formData = new FormData();
+      formData.append('songsDb', songsFile);
+      formData.append('wordsDb', wordsFile);
+      uploadStatus.textContent = 'Uploading…';
+      try {
+        const res = await fetch('/api/admin/upload', { method: 'POST', body: formData });
+        const data = await res.json();
+        if (!res.ok) {
+          const details = Array.isArray(data.details) && data.details.length > 0
+            ? '\n' + data.details.map((d) => `- ${d}`).join('\n')
+            : '';
+          uploadStatus.textContent = `${data.error}${details}`;
+          return;
+        }
+        uploadStatus.textContent = `Imported ${data.songCount} songs. ${data.duplicateGroups} possible duplicate group(s) — check /duplicates/.`;
+        setTimeout(() => window.location.reload(), 1500);
+      } catch {
+        uploadStatus.textContent = 'Could not reach the server. Check your connection and try again.';
+      }
+    });
+
+    document.querySelectorAll('.restore-btn').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const timestamp = btn.dataset.timestamp;
+        if (!window.confirm(`Replace the live database with the backup from ${timestamp}?`)) return;
+        uploadStatus.textContent = 'Restoring…';
+        try {
+          const res = await fetch('/api/admin/restore', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ timestamp }),
+          });
+          const data = await res.json();
+          if (!res.ok) {
+            uploadStatus.textContent = data.error;
+            return;
+          }
+          uploadStatus.textContent = `Restored. ${data.songCount} songs live.`;
+          setTimeout(() => window.location.reload(), 1500);
+        } catch {
+          uploadStatus.textContent = 'Could not reach the server. Check your connection and try again.';
+        }
+      });
+    });
+
+    document.getElementById('logout-btn').addEventListener('click', async () => {
+      await fetch('/api/admin/logout', { method: 'POST' });
+      window.location.href = '/admin/login';
+    });
+  </script>
+</Layout>
