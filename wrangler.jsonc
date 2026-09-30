@@ -1,18 +1,37 @@
 {
-  "name": "song-search-site",
-  "compatibility_date": "2026-09-21",
-  "compatibility_flags": ["nodejs_compat"],
-  "main": "./dist/_worker.js/index.js",
-  "assets": {
-    "directory": "./dist",
-    "binding": "ASSETS",
-    "not_found_handling": "404-page",
-    "run_worker_first": ["/set/*", "/api/*"]
-  },
-  "kv_namespaces": [
-    {
-      "binding": "SETLISTS",
-      "id": "f6cda0efd80549b8980f31511db3b004"
-    }
-  ]
+	"name": "song-search-site",
+	"compatibility_date": "2026-09-21",
+	"compatibility_flags": [
+		"nodejs_compat"
+	],
+	"main": "./dist/_worker.js/index.js",
+	"assets": {
+		"directory": "./dist",
+		"binding": "ASSETS",
+		"not_found_handling": "404-page",
+		"run_worker_first": [
+			"/set/*",
+			"/api/*"
+		]
+	},
+	"kv_namespaces": [
+		{
+			"binding": "SETLISTS",
+			"id": "f6cda0efd80549b8980f31511db3b004"
+		},
+		{
+			"binding": "SONGS_DATA",
+			"id": "6ea279f41b5f4127aab14bb81597ed6a"
+		},
+		{
+			"binding": "ADMIN_RATE_LIMIT",
+			"id": "31945b6982a14e8ba05476c307e8149c"
+		}
+	],
+	"r2_buckets": [
+		{
+			"binding": "SONG_DB_FILES",
+			"bucket_name": "song-search-site-db-files"
+		}
+	]
 }
