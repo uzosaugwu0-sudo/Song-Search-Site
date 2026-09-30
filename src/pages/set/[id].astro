@@ -226,8 +226,8 @@ const setInitJson = JSON.stringify({ setId: id, initialSongIds, initialName })
         renderSetSongs();
         try {
           await updateSetlist(setId, currentIds);
-        } catch {
-          statusEl.textContent = 'Could not save that change. Check your connection and try again.';
+        } catch (err) {
+          statusEl.textContent = err.message || 'Could not save that change. Check your connection and try again.';
         }
       }
 
