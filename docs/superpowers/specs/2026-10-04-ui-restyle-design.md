@@ -50,7 +50,8 @@ authoritative and any pair that fails WCAG AA gets a small adjustment.
 | `--color-card-foreground` | `#171a2b` | `#ecebf7` |
 | `--color-muted` | `#eceef7` | `#25243a` |
 | `--color-muted-foreground` | `#646a82` | `#a09fba` |
-| `--color-border` | `#e4e6f0` | `#302f45` |
+| `--color-border` (decorative: cards, rows, dividers) | `#e4e6f0` | `#302f45` |
+| `--color-border-strong` (new; text-input outlines, 3:1) | `#848aa3` | `#6b6a8a` |
 | `--color-primary` (logo purple) | `#4a3b9c` | `#9a8cf0` |
 | `--color-on-primary` | `#ffffff` | `#14121f` |
 | `--color-accent` (gold, new meaning) | `#c8a24a` | `#d9b45c` |
@@ -66,14 +67,18 @@ Shape, spacing and sizing (identical in both modes):
 - `--radius-sm: 8px`, `--radius-control: 12px`, `--radius-card: 16px`,
   `--radius-pill: 999px`
 - `--space-1…6`: 4, 8, 12, 16, 24, 32px
-- `--control-height: 44px` (minimum height of every button and input)
+- `--control-height: 44px` (minimum height of action buttons and text
+  inputs) and `--control-height-compact: 32px` (compact in-row controls:
+  the round `+`, the ↑ ↓ and Remove buttons, and tabs)
 - `--shadow-card` and `--shadow-raised`: soft two-layer shadows, with a
   darker variant in dark mode
-- `--focus-ring`: a 2px gold outline with 2px offset
+- `--focus-ring`: `2px solid var(--color-primary)` with a 2px offset (purple,
+  not gold: gold measures only 2.25–2.41:1 against the light backgrounds,
+  below the 3:1 WCAG minimum for a focus indicator)
 
 Type: Sora stays. Headings weight 800, body 400, small text 0.875rem.
 
-**Gold rule:** gold is used only for fills, borders, focus rings, the
+**Gold rule:** gold is used only for fills, decorative borders, the
 active-tab underline and the favorite star, never as text on a light
 background (it does not meet contrast there). Text placed on a gold fill
 uses `--color-on-accent`.
@@ -110,7 +115,7 @@ uses `--color-on-accent`.
   and attaches once the DOM is ready.
 - The button has an accessible name that describes the action ("Switch to
   dark mode" / "Switch to light mode"), updated on every change, a 44px hit
-  area, and the standard gold focus ring.
+  area, and the standard purple focus ring.
 
 ## Implementation
 
@@ -118,11 +123,15 @@ uses `--color-on-accent`.
    blocks in `Layout.astro`, add the new tokens above, and add the
    `data-theme` selectors described under the toggle.
 2. **Shared base rules.** Add one `<style is:global>` block to
-   `Layout.astro` styling plain elements: buttons, text/search/file
-   inputs and links get `--control-height`, `--radius-control`, a
-   consistent border, inherited font, and a visible `:focus-visible` ring.
-   (Astro scopes a plain `<style>` to the layout's own elements, so this
-   block must be `is:global`.) Page markup and class names are unchanged.
+   `Layout.astro` holding the tokens and a few zero-specificity
+   (`:where()`) defaults for plain elements: inherited font on form
+   controls, a pointer cursor on enabled buttons, and a visible
+   `:focus-visible` ring on links, buttons and inputs. (Astro scopes a
+   plain `<style>` to the layout's own elements, so this block must be
+   `is:global`.) Heights, radii and borders are deliberately **not** set
+   globally, because a blanket height would break the compact controls;
+   each page sets them explicitly from the tokens in its pass. Page
+   markup and class names are unchanged.
 3. **Header and toggle.** Add the theme toggle button and its inline script
    to the layout; restyle the Admin button to match the secondary-button
    treatment.
@@ -139,16 +148,23 @@ uses `--color-on-accent`.
 - Every text/background pair used on the site meets WCAG AA (4.5:1 for
   body text, 3:1 for large text and UI borders) in both modes, including
   when a mode is forced by the toggle.
-- Every button and input is at least 44px tall.
-- Keyboard focus is always visible via the gold ring; the toggle is
+- Action buttons and text inputs are at least 44px tall; compact in-row
+  controls are at least 32px (above the WCAG 2.2 minimum target of 24px).
+- Text-input outlines use `--color-border-strong` (3:1 against their
+  background); decorative card and row borders stay subtle.
+- Keyboard focus is always visible via the purple ring (3:1 or better in
+  both modes, enforced by the contrast test); the toggle is
   reachable and operable by keyboard.
 - No information is conveyed by color alone (Remove keeps its text label).
 
 ## Verification
 
-- **Contrast:** a one-off script computes the ratio for every
-  text/background token pair in both modes; failures are fixed by small
-  token adjustments before any page work is considered done.
+- **Contrast:** an automated test (`scripts/theme-contrast.test.js`, run by
+  `npm test`) reads the tokens out of `Layout.astro` and asserts the WCAG
+  ratio for every text/background pair in both modes, plus that the
+  `prefers-color-scheme` dark block and the `data-theme="dark"` block hold
+  identical values. Failures are fixed by small token adjustments, and the
+  test then keeps future palette edits honest.
 - **Toggle:** in a real browser, confirm: follows the system setting when
   nothing is saved; clicking switches immediately; the choice survives a
   reload and a navigation to another page with no flash of the other
@@ -158,8 +174,8 @@ uses `--color-on-accent`.
   desktop widths, taken with a temporary Playwright install that is
   removed afterward, reviewed with the owner before anything deploys.
 - **Regression:** the existing 83 unit tests and the production build stay
-  green. The toggle is small DOM code verified in the browser; no new unit
-  tests are added.
+  green. The toggle is small DOM code verified in the browser; the only
+  new automated tests are the contrast tests above.
 - **Behavior smoke test:** after the restyle, the search, tabs, add-to-set,
   playlist save/rename, song back-link and admin upload/restore flows are
   clicked through once in a real browser.
