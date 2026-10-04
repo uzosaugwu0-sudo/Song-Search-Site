@@ -13,6 +13,9 @@ export const prerender = false;
 
 export async function POST({ request, locals }) {
   const env = locals.runtime.env;
+  if (!env.ADMIN_PASSWORD || !env.ADMIN_SESSION_SECRET) {
+    return jsonResponse({ error: 'Admin login is not configured' }, 503);
+  }
   const ip = getClientIp(request);
 
   const allowed = await checkLoginRateLimit(env.ADMIN_RATE_LIMIT, ip);
