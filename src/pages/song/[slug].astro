@@ -132,10 +132,15 @@ const description = song
     const params = new URLSearchParams(location.search);
     const query = params.get('q');
     const page = params.get('page');
-    if (query) {
-      document.getElementById('back-link').href = `/?q=${encodeURIComponent(query)}`;
+    const set = params.get('set');
+    const backLink = document.getElementById('back-link');
+    if (set && /^[A-Za-z0-9]+$/.test(set)) {
+      backLink.href = `/set/${set}/`;
+      backLink.textContent = '← Back to playlist';
+    } else if (query) {
+      backLink.href = `/?q=${encodeURIComponent(query)}`;
     } else if (page) {
-      document.getElementById('back-link').href = `/?page=${encodeURIComponent(page)}`;
+      backLink.href = `/?page=${encodeURIComponent(page)}`;
     }
 
     const btn = document.getElementById('copy-link');

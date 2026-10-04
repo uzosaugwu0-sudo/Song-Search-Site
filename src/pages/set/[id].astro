@@ -183,7 +183,7 @@ const setInitJson = JSON.stringify({ setId: id, initialSongIds, initialName })
           li.className = 'set-song';
 
           const link = document.createElement('a');
-          link.href = `/song/${song.slug}/`;
+          link.href = `/song/${song.slug}/?set=${encodeURIComponent(setId)}`;
           link.textContent = song.title;
           li.appendChild(link);
 
