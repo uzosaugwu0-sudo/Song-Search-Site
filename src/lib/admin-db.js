@@ -1,7 +1,7 @@
 // src/lib/admin-db.js
 import { getSqlJs } from './sqlite-worker-init.js';
 import { isSqliteFile, parseSongDatabases } from './sqlite-parse.js';
-import { formatBackupTimestamp, backupPrefix } from './r2-backup.js';
+import { backupCurrentPair } from './r2-backup.js';
 import { findDuplicateGroups } from './duplicate-groups.js';
 
 export async function commitDatabasePair({ r2, kv, songsDbBytes, wordsDbBytes }) {
@@ -18,16 +18,7 @@ export async function commitDatabasePair({ r2, kv, songsDbBytes, wordsDbBytes })
     return result;
   }
 
-  const currentSongs = await r2.get('current/Songs.db');
-  if (currentSongs) {
-    const timestamp = formatBackupTimestamp();
-    const prefix = backupPrefix(timestamp);
-    const currentWords = await r2.get('current/SongWords.db');
-    await r2.put(`${prefix}Songs.db`, await currentSongs.arrayBuffer());
-    if (currentWords) {
-      await r2.put(`${prefix}SongWords.db`, await currentWords.arrayBuffer());
-    }
-  }
+  await backupCurrentPair(r2);
 
   await r2.put('current/Songs.db', songsDbBytes);
   await r2.put('current/SongWords.db', wordsDbBytes);

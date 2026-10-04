@@ -43,6 +43,8 @@ const backups = backupTimestampsFromListing(listing.objects.map((o) => o.key))
 
     <section>
       <h2>Backup history</h2>
+      <p><button type="button" id="backup-btn">Back up now</button></p>
+      <p id="backup-status"></p>
       {backups.length === 0 ? (
         <p class="status">No backups yet.</p>
       ) : (
@@ -89,7 +91,7 @@ const backups = backupTimestampsFromListing(listing.objects.map((o) => o.key))
       background: var(--color-muted);
       color: var(--color-foreground);
     }
-    #upload-status { white-space: pre-line; color: var(--color-muted-foreground); }
+    #upload-status, #backup-status { white-space: pre-line; color: var(--color-muted-foreground); }
     #backup-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-2); }
     #backup-list li {
       display: flex;
@@ -147,6 +149,28 @@ const backups = backupTimestampsFromListing(listing.objects.map((o) => o.key))
         setTimeout(() => window.location.reload(), 1500);
       } catch {
         uploadStatus.textContent = 'Could not reach the server. Check your connection and try again.';
+      }
+    });
+
+    const backupBtn = document.getElementById('backup-btn');
+    const backupStatus = document.getElementById('backup-status');
+
+    backupBtn.addEventListener('click', async () => {
+      backupBtn.disabled = true;
+      backupStatus.textContent = 'Backing up…';
+      try {
+        const res = await fetch('/api/admin/backup', { method: 'POST' });
+        const data = await res.json().catch(() => ({ error: 'Backup failed (server error).' }));
+        if (!res.ok) {
+          backupStatus.textContent = data.error;
+          backupBtn.disabled = false;
+          return;
+        }
+        backupStatus.textContent = `Backup saved: ${data.timestamp}`;
+        setTimeout(() => window.location.reload(), 1200);
+      } catch {
+        backupStatus.textContent = 'Could not reach the server. Check your connection and try again.';
+        backupBtn.disabled = false;
       }
     });
 

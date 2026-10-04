@@ -15,8 +15,8 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
   <div id="tabs">
     <button type="button" class="tab active" data-tab="all">All Songs</button>
     <button type="button" class="tab" data-tab="favorites">Favorites</button>
-    <button type="button" class="tab" data-tab="recent">Recently Used</button>
-    <button type="button" class="tab" data-tab="set">My Playlists</button>
+    <button type="button" class="tab" data-tab="recent">Recently Viewed</button>
+    <button type="button" class="tab" data-tab="set">Service List</button>
   </div>
 
   <p id="status"></p>
@@ -294,8 +294,8 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
         const type = btn.dataset.tab;
         const label = type === 'all' ? 'All Songs'
           : type === 'favorites' ? 'Favorites'
-          : type === 'recent' ? 'Recently Used'
-          : 'My Playlists';
+          : type === 'recent' ? 'Recently Viewed'
+          : 'Service List';
         const count = type === 'favorites' ? favCount
           : type === 'recent' ? recentCount
           : type === 'set' ? playlistCount
@@ -306,6 +306,10 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
 
     function showTabs() {
       tabs.style.display = 'flex';
+    }
+
+    function markActiveTab(tab) {
+      for (const btn of tabButtons) btn.classList.toggle('active', btn.dataset.tab === tab);
     }
 
     function renderFavoritesTab() {
@@ -407,7 +411,7 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
 
       const nameInput = document.createElement('input');
       nameInput.type = 'text';
-      nameInput.placeholder = 'Name this playlist (e.g. Sunday Service — Sept 28)';
+      nameInput.placeholder = 'Name this service list (e.g. Sunday Service — Sept 28)';
       nameInput.className = 'playlist-name-input';
       nameInput.maxLength = 100;
       nameInput.value = draftNameValue;
@@ -434,7 +438,7 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
           renderPlaylistsTab();
         } catch (err) {
           updateSaveDisabled();
-          showTransientStatus(err.message || 'Could not save this playlist — check your connection and try again.');
+          showTransientStatus(err.message || 'Could not save this service list — check your connection and try again.');
         }
       });
 
@@ -455,13 +459,13 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
 
       const libraryLabel = document.createElement('li');
       libraryLabel.className = 'playlist-section-label';
-      libraryLabel.textContent = 'Your Playlists';
+      libraryLabel.textContent = 'Your Service Lists';
       results.appendChild(libraryLabel);
 
       if (cachedPlaylists.length === 0) {
         const emptyLi = document.createElement('li');
         emptyLi.className = 'set-controls';
-        emptyLi.textContent = "You haven't saved any playlists yet.";
+        emptyLi.textContent = "You haven't saved any service lists yet.";
         results.appendChild(emptyLi);
       } else {
         for (const playlist of cachedPlaylists) {
@@ -497,7 +501,7 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
     function switchTab(tab) {
       if (input.value) input.value = '';
       currentTab = tab;
-      for (const btn of tabButtons) btn.classList.toggle('active', btn.dataset.tab === tab);
+      markActiveTab(tab);
       renderCurrentTab();
     }
 
@@ -600,7 +604,7 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
       const addBtn = document.createElement('button');
       addBtn.type = 'button';
       addBtn.className = 'add-to-set-btn';
-      addBtn.title = 'Add to set';
+      addBtn.title = 'Add to list';
       addBtn.textContent = '+';
       addBtn.addEventListener('click', (e) => {
         e.preventDefault();
@@ -671,7 +675,8 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
       results.replaceChildren();
       selectedIndex = -1;
       pagination.style.display = 'none';
-      tabs.style.display = 'none';
+      showTabs();
+      markActiveTab('all');
 
       if (updateUrl) {
         history.replaceState(null, '', `?q=${encodeURIComponent(query)}`);
@@ -701,6 +706,7 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
       if (query) {
         renderSearch(query);
       } else {
+        markActiveTab(currentTab);
         renderCurrentTab();
       }
     });

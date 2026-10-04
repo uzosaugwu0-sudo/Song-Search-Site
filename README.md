@@ -17,22 +17,26 @@ For searching and selecting a song without a mouse (handy during a live service)
 
 Shortcuts are inactive while typing in the search box, so normal typing (including letters that overlap a shortcut, like "f" or "/") is unaffected.
 
-## Set lists (playlists)
+## Service lists
 
 Build a list of songs (e.g. for a Sunday service) using the "+" button
-on any search result or the "Add to Set" button on a song page — both
-add to your current in-progress draft. When it's ready, open the "My
-Playlists" tab, give the draft a name, and click "Save". This creates
-a shareable link like `/set/<id>/` and adds the playlist to your
-personal library, shown as "Your Playlists" on that same tab. Anyone
-with the link can view it and add, remove, or reorder songs — changes
-are visible to everyone who has the link, since the set list lives in
-a Cloudflare KV store, not in the URL itself.
+on any search result or the "Add to List" button on a song page — both
+add to your current in-progress draft. When it's ready, open the
+"Service List" tab, give the draft a name, and click "Save". This
+creates a shareable link like `/set/<id>/` and adds the service list to
+your personal library, shown as "Your Service Lists" on that same tab.
+Anyone with the link can view it and add, remove, or reorder songs —
+changes are visible to everyone who has the link, since the list lives
+in a Cloudflare KV store, not in the URL itself.
 
-Opening a playlist someone else shared with you shows a "Save to My
-Playlists" button, which bookmarks it into your own library too.
+Opening a service list someone else shared with you shows a "Save to
+Service List" button, which bookmarks it into your own library too.
 "Remove" in your library only forgets it locally — it doesn't delete
-the playlist, so the link keeps working for anyone who has it.
+the list, so the link keeps working for anyone who has it.
+
+The "Recently Viewed" tab lists the last 20 songs opened on that device.
+To keep it from going stale, it clears itself after every 50 song views
+(the next song opened starts a fresh list).
 
 ## Develop
 

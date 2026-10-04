@@ -42,7 +42,7 @@ const setInitJson = JSON.stringify({ setId: id, initialSongIds, initialName })
         <div class="actions">
           <button id="rename-btn">Rename</button>
           <button id="copy-link">Copy link</button>
-          <button id="save-to-library">Save to My Playlists</button>
+          <button id="save-to-library">Save to Service List</button>
         </div>
         <p id="status"></p>
         <ul id="set-songs"></ul>
@@ -290,7 +290,7 @@ const setInitJson = JSON.stringify({ setId: id, initialSongIds, initialName })
 
         const newName = renameInput.value.trim();
         if (!newName) {
-          statusEl.textContent = 'A playlist needs a name.';
+          statusEl.textContent = 'A service list needs a name.';
           return;
         }
         renameBtn.disabled = true;
@@ -318,7 +318,7 @@ const setInitJson = JSON.stringify({ setId: id, initialSongIds, initialName })
           saveToLibraryBtn.textContent = '✓ Saved';
           saveToLibraryBtn.disabled = true;
         } else {
-          saveToLibraryBtn.textContent = 'Save to My Playlists';
+          saveToLibraryBtn.textContent = 'Save to Service List';
           saveToLibraryBtn.disabled = false;
         }
       }

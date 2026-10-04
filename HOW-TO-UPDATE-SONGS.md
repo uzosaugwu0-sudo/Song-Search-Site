@@ -41,3 +41,12 @@ If you uploaded the wrong file, or something looks wrong on the live site
 even though the upload succeeded, open the admin panel's "Backup history"
 list and click **Restore** next to the last known-good upload — this
 reverts the site to that database immediately.
+
+## Making a backup on demand
+
+Every upload automatically saves the previous database as a dated
+backup. To save the current live database as a dated backup without
+uploading anything (for example before a big cleanup), open the admin
+panel and click **Back up now** in the "Backup history" section. The new
+backup appears in the list straight away, and backups are kept
+permanently.

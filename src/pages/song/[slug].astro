@@ -48,7 +48,7 @@ const description = song
       <button id="favorite-toggle" aria-pressed="false">
         <span id="favorite-star">☆</span> Favorite
       </button>
-      <button id="add-to-set" data-song-id={song.id}>Add to Set</button>
+      <button id="add-to-set" data-song-id={song.id}>Add to List</button>
     </div>
   </div>
 
@@ -126,7 +126,7 @@ const description = song
     const backLink = document.getElementById('back-link');
     if (set && /^[A-Za-z0-9]+$/.test(set)) {
       backLink.href = `/set/${set}/`;
-      backLink.textContent = '← Back to playlist';
+      backLink.textContent = '← Back to service list';
     } else if (query) {
       backLink.href = `/?q=${encodeURIComponent(query)}`;
     } else if (page) {
@@ -152,16 +152,6 @@ const description = song
     function setFavorites(ids) {
       try { localStorage.setItem('songSearchFavorites', JSON.stringify(ids)); } catch {}
     }
-    function addRecent(id) {
-      try {
-        const recent = JSON.parse(localStorage.getItem('songSearchRecent') || '[]').filter((x) => x !== id);
-        recent.unshift(id);
-        localStorage.setItem('songSearchRecent', JSON.stringify(recent.slice(0, 20)));
-      } catch {}
-    }
-
-    addRecent(songId);
-
     const favBtn = document.getElementById('favorite-toggle');
     const favStar = document.getElementById('favorite-star');
     function updateFavButton(isFav) {
@@ -179,8 +169,10 @@ const description = song
 
   <script>
     import { addToDraft } from '../../lib/setlist-client.js';
+    import { recordView } from '../../lib/recent.js';
 
     const addToSetBtn = document.getElementById('add-to-set');
+    recordView(addToSetBtn.dataset.songId);
     const addToSetDefaultText = addToSetBtn.textContent;
     addToSetBtn.addEventListener('click', () => {
       addToDraft(addToSetBtn.dataset.songId);
