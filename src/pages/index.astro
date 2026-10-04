@@ -26,77 +26,79 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
   <style is:global>
     #search {
       width: 100%;
-      padding: 16px 20px;
+      min-height: var(--control-height);
+      padding: var(--space-4) var(--space-5);
       font-size: 1.05rem;
-      border: 1px solid var(--color-border);
-      border-radius: 14px;
+      border: 1px solid var(--color-border-strong);
+      border-radius: var(--radius-control);
       background: var(--color-card);
       color: var(--color-card-foreground);
       box-shadow: var(--shadow-card);
     }
-    #search:focus {
-      outline: 2px solid var(--color-primary);
-      outline-offset: 1px;
-    }
     .hint {
       color: var(--color-muted-foreground);
       font-size: 0.9rem;
-      margin: 8px 0 0;
+      margin: var(--space-2) 0 0;
     }
     #status {
       color: var(--color-muted-foreground);
-      margin-top: 16px;
+      margin-top: var(--space-4);
     }
     #tabs {
       display: flex;
-      gap: 4px;
-      margin-top: 24px;
-      border-bottom: 1px solid var(--color-border);
+      gap: var(--space-1);
+      width: fit-content;
+      max-width: 100%;
+      margin-top: var(--space-5);
+      padding: var(--space-1);
+      background: var(--color-muted);
+      border-radius: var(--radius-control);
+      overflow-x: auto;
     }
     .tab {
       appearance: none;
       background: none;
       border: none;
-      border-bottom: 2px solid transparent;
-      margin-bottom: -1px;
-      padding: 10px 14px;
+      border-radius: var(--radius-sm);
+      min-height: var(--control-height-compact);
+      padding: 0 var(--space-4);
       font-family: 'Sora', ui-sans-serif, system-ui, sans-serif;
       font-size: 0.95rem;
+      white-space: nowrap;
       color: var(--color-muted-foreground);
-      cursor: pointer;
     }
     .tab:hover {
-      color: var(--color-card-foreground);
+      color: var(--color-foreground);
     }
     .tab.active {
-      color: var(--color-primary);
-      border-bottom-color: var(--color-primary);
+      background: var(--color-card);
+      color: var(--color-foreground);
       font-weight: 600;
+      box-shadow: inset 0 -2px 0 var(--color-accent);
     }
     #results {
       list-style: none;
-      margin: 24px 0 0;
+      margin: var(--space-5) 0 0;
       padding: 0;
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-      gap: 16px;
+      gap: var(--space-4);
     }
     .result-item {
       position: relative;
     }
     .add-to-set-btn {
       position: absolute;
-      top: 12px;
-      right: 12px;
-      width: 28px;
-      height: 28px;
-      border-radius: 50%;
+      top: var(--space-3);
+      right: var(--space-3);
+      width: var(--control-height-compact);
+      height: var(--control-height-compact);
+      border-radius: var(--radius-pill);
       border: 1px solid var(--color-border);
       background: var(--color-card);
       color: var(--color-primary);
       font-size: 1.1rem;
       line-height: 1;
-      cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -108,18 +110,20 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
     }
     .set-controls {
       display: flex;
-      gap: 10px;
+      gap: var(--space-3);
       align-items: center;
       grid-column: 1 / -1;
     }
     .set-controls button, .set-controls a {
-      padding: 10px 16px;
-      border-radius: 10px;
+      display: inline-flex;
+      align-items: center;
+      min-height: var(--control-height);
+      padding: 0 var(--space-4);
+      border-radius: var(--radius-control);
       border: 1px solid var(--color-border);
       background: var(--color-card);
       color: var(--color-card-foreground);
       text-decoration: none;
-      cursor: pointer;
       font-size: 0.9rem;
     }
     .set-controls button:disabled {
@@ -131,15 +135,16 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
       font-family: 'Sora', ui-sans-serif, system-ui, sans-serif;
       font-weight: 700;
       font-size: 0.95rem;
-      margin: 8px 0 -4px;
+      margin: var(--space-2) 0 calc(-1 * var(--space-1));
       color: var(--color-muted-foreground);
     }
     .playlist-name-input {
       flex: 1;
       min-width: 200px;
-      padding: 10px 14px;
-      border: 1px solid var(--color-border);
-      border-radius: 10px;
+      min-height: var(--control-height);
+      padding: 0 var(--space-4);
+      border: 1px solid var(--color-border-strong);
+      border-radius: var(--radius-control);
       background: var(--color-card);
       color: var(--color-card-foreground);
       font-size: 0.9rem;
@@ -148,10 +153,10 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
       grid-column: 1 / -1;
       display: flex;
       align-items: center;
-      gap: 10px;
-      padding: 12px 16px;
+      gap: var(--space-3);
+      padding: var(--space-3) var(--space-4);
       border: 1px solid var(--color-border);
-      border-radius: 12px;
+      border-radius: var(--radius-control);
       background: var(--color-card);
     }
     .set-song-row a {
@@ -165,14 +170,20 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
     .row-controls {
       margin-left: auto;
       display: flex;
-      gap: 6px;
+      gap: var(--space-2);
     }
     .row-controls button {
+      min-width: var(--control-height-compact);
+      min-height: var(--control-height-compact);
       border: 1px solid var(--color-border);
       background: var(--color-card);
-      border-radius: 8px;
-      padding: 4px 10px;
-      cursor: pointer;
+      color: var(--color-card-foreground);
+      border-radius: var(--radius-sm);
+      padding: 0 var(--space-3);
+    }
+    .row-controls button:last-child {
+      color: var(--color-danger);
+      border-color: var(--color-danger-border);
     }
     .row-controls button:disabled {
       opacity: 0.4;
@@ -180,9 +191,9 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
     }
     .result-card {
       display: block;
-      padding: 20px;
+      padding: var(--space-5) calc(var(--control-height-compact) + var(--space-5)) var(--space-5) var(--space-5);
       border: 1px solid var(--color-border);
-      border-radius: 16px;
+      border-radius: var(--radius-card);
       background: var(--color-card);
       color: var(--color-card-foreground);
       text-decoration: none;
@@ -191,10 +202,10 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
     }
     .result-card:hover {
       transform: translateY(-2px);
-      box-shadow: 0 2px 4px rgba(26, 26, 46, 0.08), 0 12px 28px rgba(26, 26, 46, 0.1);
+      box-shadow: var(--shadow-raised);
     }
     .result-card.selected {
-      outline: 2px solid var(--color-primary);
+      outline: var(--focus-ring);
       outline-offset: 2px;
     }
     .result-title {
@@ -204,7 +215,7 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
     }
     .result-author { color: var(--color-muted-foreground); font-size: 0.9rem; }
     .result-snippet {
-      margin-top: 6px;
+      margin-top: var(--space-2);
       font-size: 0.9rem;
       color: var(--color-muted-foreground);
     }
@@ -212,22 +223,26 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
       background: var(--color-primary);
       color: var(--color-on-primary);
       font-weight: 600;
-      padding: 1px 4px;
-      border-radius: 3px;
+      padding: 1px var(--space-1);
+      border-radius: var(--space-1);
     }
     #pagination {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-top: 32px;
-      gap: 16px;
+      margin-top: var(--space-6);
+      gap: var(--space-4);
     }
     #pagination a {
-      padding: 10px 18px;
+      display: inline-flex;
+      align-items: center;
+      min-height: var(--control-height);
+      padding: 0 var(--space-4);
       border: 1px solid var(--color-border);
-      border-radius: 10px;
+      border-radius: var(--radius-control);
       text-decoration: none;
       background: var(--color-card);
+      color: var(--color-primary);
     }
     #pagination .page-count {
       color: var(--color-muted-foreground);
