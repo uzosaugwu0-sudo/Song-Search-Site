@@ -3,3 +3,4 @@ dist/
 .astro/
 src/data/songs.json
 .dev.vars
+.wrangler/

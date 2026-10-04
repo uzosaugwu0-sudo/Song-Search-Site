@@ -26,12 +26,12 @@ function buildFixtureDbs(dir) {
   return { songsPath, wordsPath };
 }
 
-test('runImport joins the two DBs and writes slugged songs to outPath', () => {
+test('runImport joins the two DBs and writes slugged songs to outPath', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'song-import-test-'));
   const { songsPath, wordsPath } = buildFixtureDbs(dir);
   const outPath = join(dir, 'songs.json');
 
-  runImport({ songsDbPath: songsPath, wordsDbPath: wordsPath, outPath });
+  await runImport({ songsDbPath: songsPath, wordsDbPath: wordsPath, outPath });
 
   const songs = JSON.parse(readFileSync(outPath, 'utf8'));
   rmSync(dir, { recursive: true, force: true });
@@ -44,7 +44,7 @@ test('runImport joins the two DBs and writes slugged songs to outPath', () => {
   assert.equal(grace.slug, 'amazing-grace');
 });
 
-test('runImport exits with a clear error when a song has empty lyrics', () => {
+test('runImport exits with a clear error when a song has empty lyrics', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'song-import-test-'));
   const songsPath = join(dir, 'Songs.db');
   const wordsPath = join(dir, 'SongWords.db');
@@ -61,14 +61,12 @@ test('runImport exits with a clear error when a song has empty lyrics', () => {
 
   const outPath = join(dir, 'songs.json');
 
-  assert.throws(() => {
-    runImport({ songsDbPath: songsPath, wordsDbPath: wordsPath, outPath });
-  }, /Blank Song/);
+  await assert.rejects(runImport({ songsDbPath: songsPath, wordsDbPath: wordsPath, outPath }), /Blank Song/);
 
   rmSync(dir, { recursive: true, force: true });
 });
 
-test('runImport coerces BLOB words (Buffer/Uint8Array) to text instead of treating them as empty', () => {
+test('runImport coerces BLOB words (Buffer/Uint8Array) to text instead of treating them as empty', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'song-import-test-'));
   const songsPath = join(dir, 'Songs.db');
   const wordsPath = join(dir, 'SongWords.db');
@@ -85,7 +83,7 @@ test('runImport coerces BLOB words (Buffer/Uint8Array) to text instead of treati
   wordsDb.close();
 
   const outPath = join(dir, 'songs.json');
-  runImport({ songsDbPath: songsPath, wordsDbPath: wordsPath, outPath });
+  await runImport({ songsDbPath: songsPath, wordsDbPath: wordsPath, outPath });
 
   const songs = JSON.parse(readFileSync(outPath, 'utf8'));
   rmSync(dir, { recursive: true, force: true });
@@ -94,7 +92,7 @@ test('runImport coerces BLOB words (Buffer/Uint8Array) to text instead of treati
   assert.equal(songs[0].lyrics, 'Amazing grace\nhow sweet the sound');
 });
 
-test('runImport throws a clear error (not a raw TypeError) when a row has a NULL title', () => {
+test('runImport throws a clear error (not a raw TypeError) when a row has a NULL title', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'song-import-test-'));
   const songsPath = join(dir, 'Songs.db');
   const wordsPath = join(dir, 'SongWords.db');
@@ -111,9 +109,7 @@ test('runImport throws a clear error (not a raw TypeError) when a row has a NULL
 
   const outPath = join(dir, 'songs.json');
 
-  assert.throws(() => {
-    runImport({ songsDbPath: songsPath, wordsDbPath: wordsPath, outPath });
-  }, (err) => {
+  await assert.rejects(runImport({ songsDbPath: songsPath, wordsDbPath: wordsPath, outPath }), (err) => {
     assert.ok(!(err instanceof TypeError), `expected a clear Error, got ${err.constructor.name}`);
     assert.match(err.message, /row 1/);
     return true;
@@ -122,7 +118,7 @@ test('runImport throws a clear error (not a raw TypeError) when a row has a NULL
   rmSync(dir, { recursive: true, force: true });
 });
 
-test('runImport throws a clear error (not a raw TypeError) when a row has a NULL song_uid', () => {
+test('runImport throws a clear error (not a raw TypeError) when a row has a NULL song_uid', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'song-import-test-'));
   const songsPath = join(dir, 'Songs.db');
   const wordsPath = join(dir, 'SongWords.db');
@@ -139,9 +135,7 @@ test('runImport throws a clear error (not a raw TypeError) when a row has a NULL
 
   const outPath = join(dir, 'songs.json');
 
-  assert.throws(() => {
-    runImport({ songsDbPath: songsPath, wordsDbPath: wordsPath, outPath });
-  }, (err) => {
+  await assert.rejects(runImport({ songsDbPath: songsPath, wordsDbPath: wordsPath, outPath }), (err) => {
     assert.ok(!(err instanceof TypeError), `expected a clear Error, got ${err.constructor.name}`);
     assert.match(err.message, /Untitled Hymn/);
     assert.match(err.message, /row 1/);
@@ -151,14 +145,12 @@ test('runImport throws a clear error (not a raw TypeError) when a row has a NULL
   rmSync(dir, { recursive: true, force: true });
 });
 
-test('runImport throws a clear error when a DB file is missing', () => {
+test('runImport throws a clear error when a DB file is missing', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'song-import-test-'));
-  assert.throws(() => {
-    runImport({
+  await assert.rejects(runImport({
       songsDbPath: join(dir, 'missing-Songs.db'),
       wordsDbPath: join(dir, 'missing-SongWords.db'),
       outPath: join(dir, 'songs.json'),
-    });
-  }, /Songs\.db/);
+    }), /Songs\.db/);
   rmSync(dir, { recursive: true, force: true });
 });

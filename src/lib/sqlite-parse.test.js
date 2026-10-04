@@ -99,6 +99,23 @@ test('parseSongDatabases decodes BLOB words instead of treating them as empty', 
   assert.equal(result.songs[0].lyrics, 'Amazing grace\nhow sweet the sound');
 });
 
+test('parseSongDatabases returns an error (not a throw) when two songs collide on slug', async () => {
+  const SQL = await initSqlJs();
+  const songsDbBytes = await buildFixtureDbBytes((db) => {
+    db.run('CREATE TABLE song (song_uid TEXT, title TEXT, author TEXT)');
+    db.run('INSERT INTO song (song_uid, title, author) VALUES (?, ?, ?)', ['A-1', 'Same Title', 'x']);
+    db.run('INSERT INTO song (song_uid, title, author) VALUES (?, ?, ?)', ['a_1', 'Same Title', 'y']);
+  });
+  const wordsDbBytes = await buildFixtureDbBytes((db) => {
+    db.run('CREATE TABLE word (song_id INTEGER, words TEXT)');
+    db.run('INSERT INTO word (song_id, words) VALUES (?, ?)', [1, String.raw`{\rtf1\ansi one}`]);
+    db.run('INSERT INTO word (song_id, words) VALUES (?, ?)', [2, String.raw`{\rtf1\ansi two}`]);
+  });
+
+  const result = parseSongDatabases(SQL, songsDbBytes, wordsDbBytes);
+  assert.match(result.error, /Duplicate slugs/);
+});
+
 test('isSqliteFile recognizes a real SQLite file and rejects garbage', async () => {
   const bytes = await buildFixtureDbBytes((db) => {
     db.run('CREATE TABLE t (a INT)');

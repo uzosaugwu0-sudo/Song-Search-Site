@@ -90,5 +90,9 @@ export function parseSongDatabases(SQL, songsDbBytes, wordsDbBytes) {
     };
   }
 
-  return { songs: assignSlugs(songs) };
+  try {
+    return { songs: assignSlugs(songs) };
+  } catch (err) {
+    return { error: `Import failed: ${err.message}`, details: [] };
+  }
 }
