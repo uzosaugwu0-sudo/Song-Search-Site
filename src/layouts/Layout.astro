@@ -65,17 +65,38 @@ const { title, description = 'Search a song database by title or lyrics.' } = As
       margin: 0 auto;
       padding: 32px 20px 64px;
     }
+    .site-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    .logo-link { display: block; line-height: 0; }
     .site-logo {
       display: block;
       height: 56px;
       width: auto;
-      margin-bottom: 20px;
+    }
+    .admin-link {
+      color: var(--color-muted-foreground);
+      border: 1px solid var(--color-border);
+      border-radius: 10px;
+      padding: 8px 14px;
+      font-size: 0.9rem;
+      text-decoration: none;
+    }
+    .admin-link:hover {
+      color: var(--color-foreground);
+      border-color: var(--color-muted-foreground);
     }
   </style>
 </head>
 <body>
   <div class="container">
-    <img src="/logo.png" alt="Wisdom Assembly Family Church" class="site-logo" />
+    <div class="site-header">
+      <a href="/" class="logo-link"><img src="/logo.png" alt="Wisdom Assembly Family Church — home" class="site-logo" /></a>
+      <a href="/admin/" class="admin-link">Admin</a>
+    </div>
     <slot />
   </div>
 </body>
