@@ -54,12 +54,12 @@ const setInitJson = JSON.stringify({ setId: id, initialSongIds, initialName })
     )}
   </div>
 
-  <style>
+  <style is:global>
     .page {
       max-width: 680px;
       margin: 0 auto;
     }
-    .status {
+    .status, #status {
       color: var(--color-muted-foreground);
       margin: var(--space-4) 0;
     }
