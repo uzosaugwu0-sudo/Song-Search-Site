@@ -4,3 +4,4 @@ dist/
 src/data/songs.json
 .dev.vars
 .wrangler/
+.superpowers/
