@@ -99,6 +99,11 @@ const { title, description = 'Search a song database by title or lyrics.' } = As
       }
     }
     a { color: var(--color-primary); }
+    h1 {
+      font-family: 'Sora', ui-sans-serif, system-ui, sans-serif;
+      font-weight: 800;
+      margin: 0 0 var(--space-2);
+    }
     :where(button, input, select, textarea) { font-family: inherit; }
     :where(button:not(:disabled)) { cursor: pointer; }
     :where(a, button, input, select, textarea):focus-visible {
@@ -121,11 +126,6 @@ const { title, description = 'Search a song database by title or lyrics.' } = As
       color: var(--color-foreground);
       font-family: 'Sora', ui-sans-serif, system-ui, sans-serif;
       line-height: 1.6;
-    }
-    h1 {
-      font-family: 'Sora', ui-sans-serif, system-ui, sans-serif;
-      font-weight: 800;
-      margin: 0 0 var(--space-2);
     }
     .container {
       max-width: 1040px;

@@ -44,6 +44,7 @@ const PAIRS = [
   ['card text on card', '--color-card-foreground', '--color-card', 4.5],
   ['muted text on background', '--color-muted-foreground', '--color-background', 4.5],
   ['muted text on card', '--color-muted-foreground', '--color-card', 4.5],
+  ['foreground on muted', '--color-foreground', '--color-muted', 4.5],
   ['muted text on muted', '--color-muted-foreground', '--color-muted', 4.5],
   ['on-primary on primary', '--color-on-primary', '--color-primary', 4.5],
   ['primary text on background', '--color-primary', '--color-background', 4.5],

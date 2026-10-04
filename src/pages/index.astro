@@ -152,6 +152,7 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
     .set-song-row {
       grid-column: 1 / -1;
       display: flex;
+      flex-wrap: wrap;
       align-items: center;
       gap: var(--space-3);
       padding: var(--space-3) var(--space-4);
