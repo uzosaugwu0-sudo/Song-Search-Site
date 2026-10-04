@@ -162,7 +162,7 @@ const backups = backupTimestampsFromListing(listing.objects.map((o) => o.key))
         const res = await fetch('/api/admin/backup', { method: 'POST' });
         const data = await res.json().catch(() => ({ error: 'Backup failed (server error).' }));
         if (!res.ok) {
-          backupStatus.textContent = data.error;
+          backupStatus.textContent = data.error || 'Backup failed.';
           backupBtn.disabled = false;
           return;
         }

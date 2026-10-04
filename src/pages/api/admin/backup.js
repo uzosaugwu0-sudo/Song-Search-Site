@@ -11,9 +11,13 @@ export async function POST({ request, locals }) {
     return jsonResponse({ error: 'Not authenticated' }, 401);
   }
 
-  const timestamp = await backupCurrentPair(env.SONG_DB_FILES);
-  if (!timestamp) {
-    return jsonResponse({ error: 'There is no database to back up yet. Upload one first.' }, 404);
+  try {
+    const timestamp = await backupCurrentPair(env.SONG_DB_FILES);
+    if (!timestamp) {
+      return jsonResponse({ error: 'There is no database to back up yet. Upload one first.' }, 404);
+    }
+    return jsonResponse({ timestamp });
+  } catch {
+    return jsonResponse({ error: 'Backup failed. Please try again.' }, 500);
   }
-  return jsonResponse({ timestamp });
 }

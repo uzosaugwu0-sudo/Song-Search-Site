@@ -499,7 +499,10 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
     }
 
     function switchTab(tab) {
-      if (input.value) input.value = '';
+      if (input.value) {
+        input.value = '';
+        history.replaceState(null, '', location.pathname);
+      }
       currentTab = tab;
       markActiveTab(tab);
       renderCurrentTab();
@@ -706,6 +709,7 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
       if (query) {
         renderSearch(query);
       } else {
+        history.replaceState(null, '', location.pathname);
         markActiveTab(currentTab);
         renderCurrentTab();
       }
