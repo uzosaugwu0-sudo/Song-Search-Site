@@ -63,6 +63,9 @@
   background: var(--color-card);
 }
 .row-title {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--control-height-compact);
   font-weight: 600;
   color: var(--color-card-foreground);
   text-decoration: none;
