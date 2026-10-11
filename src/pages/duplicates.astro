@@ -30,7 +30,7 @@ const totalDuplicateSongs = duplicateGroups.reduce((sum, group) => sum + group.l
         </p>
         <ul class="groups">
           {duplicateGroups.map((group) => (
-            <li class="group">
+            <li class="group card">
               <h2>{group.length} songs with matching titles</h2>
               <ul class="group-songs">
                 {group.map((song) => (
@@ -48,10 +48,6 @@ const totalDuplicateSongs = duplicateGroups.reduce((sum, group) => sum + group.l
   </div>
 
   <style>
-    .page {
-      max-width: 680px;
-      margin: 0 auto;
-    }
     .intro {
       color: var(--color-muted-foreground);
       margin: 0 0 var(--space-5);
@@ -70,10 +66,6 @@ const totalDuplicateSongs = duplicateGroups.reduce((sum, group) => sum + group.l
     }
     .group {
       padding: var(--space-5);
-      border: 1px solid var(--color-border);
-      border-radius: var(--radius-card);
-      background: var(--color-card);
-      box-shadow: var(--shadow-card);
     }
     .group h2 {
       font-size: 1rem;

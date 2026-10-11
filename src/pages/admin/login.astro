@@ -7,8 +7,8 @@ export const prerender = false;
   <div class="page">
     <h1>Admin Login</h1>
     <form id="login-form">
-      <input type="password" id="password" placeholder="Password" autofocus required />
-      <button type="submit">Log in</button>
+      <input type="password" id="password" class="input" placeholder="Password" autofocus required />
+      <button type="submit" class="btn btn-primary">Log in</button>
     </form>
     <p id="status"></p>
   </div>
@@ -16,24 +16,7 @@ export const prerender = false;
   <style>
     .page { max-width: 420px; margin: calc(var(--space-6) * 2) auto 0; }
     #login-form { display: flex; gap: var(--space-3); }
-    #password {
-      flex: 1;
-      min-height: var(--control-height);
-      padding: 0 var(--space-4);
-      border: 1px solid var(--color-border-strong);
-      border-radius: var(--radius-control);
-      background: var(--color-card);
-      color: var(--color-card-foreground);
-    }
-    button {
-      min-height: var(--control-height);
-      padding: 0 var(--space-5);
-      border: 1px solid var(--color-primary);
-      border-radius: var(--radius-control);
-      background: var(--color-primary);
-      color: var(--color-on-primary);
-      font-weight: 600;
-    }
+    #password { flex: 1; width: auto; }
     #status { color: var(--color-muted-foreground); margin-top: var(--space-3); white-space: pre-line; }
   </style>
 
