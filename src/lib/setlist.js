@@ -1,9 +1,22 @@
+import { isHeading, countSongs, MAX_SETLIST_SECTIONS, MAX_SECTION_NAME_LENGTH } from './sections.js';
+
 export const MAX_SETLIST_SIZE = 50;
 export const MAX_SETLIST_NAME_LENGTH = 100;
 
-export function filterValidSongIds(songIds, validIds) {
-  if (!Array.isArray(songIds)) return [];
-  return songIds.filter((id) => typeof id === 'string' && validIds.has(id));
+export function filterValidItems(items, validIds) {
+  if (!Array.isArray(items)) return [];
+  const seen = new Set();
+  const result = [];
+  for (const item of items) {
+    if (isHeading(item)) {
+      const section = item.section.trim();
+      if (section.length > 0 && section.length <= MAX_SECTION_NAME_LENGTH) result.push({ section });
+    } else if (typeof item === 'string' && validIds.has(item) && !seen.has(item)) {
+      seen.add(item);
+      result.push(item);
+    }
+  }
+  return result;
 }
 
 export function generateSetlistId() {
@@ -17,21 +30,25 @@ export function generateSetlistId() {
   return id;
 }
 
-export function buildSetlistValue(songIds, name) {
-  return JSON.stringify({ songIds, name, updatedAt: new Date().toISOString() });
+export function buildSetlistValue(songIds, name, createdAt, updatedAt = new Date().toISOString()) {
+  return JSON.stringify({ songIds, name, createdAt: createdAt ?? updatedAt, updatedAt });
 }
 
 export const SOFT_DELETE_TTL_SECONDS = 30 * 24 * 60 * 60;
 
-export function buildSetlistMetadata(songIds, name, updatedAt) {
-  return { name, count: songIds.length, updatedAt };
+export function buildSetlistMetadata(songIds, name, createdAt, updatedAt) {
+  return { name, count: countSongs(songIds), createdAt, updatedAt };
 }
 
 // Writes the list plus the summary the public listing reads from kv.list().
-export function putSetlist(kv, id, songIds, name) {
-  const value = buildSetlistValue(songIds, name);
-  const { updatedAt } = JSON.parse(value);
-  return kv.put(id, value, { metadata: buildSetlistMetadata(songIds, name, updatedAt) }).then(() => value);
+// Pass createdAt (and updatedAt, to keep it unchanged) when rewriting an existing list.
+export async function putSetlist(kv, id, songIds, name, { createdAt, updatedAt } = {}) {
+  const value = buildSetlistValue(songIds, name, createdAt, updatedAt);
+  const saved = JSON.parse(value);
+  await kv.put(id, value, {
+    metadata: buildSetlistMetadata(songIds, name, saved.createdAt, saved.updatedAt),
+  });
+  return value;
 }
 
 // Returns the parsed list, or null if it doesn't exist or was soft-deleted.
@@ -48,8 +65,15 @@ export function markDeleted(raw) {
 export function toListEntries(keys) {
   return keys
     .filter((k) => k.metadata && !k.metadata.deleted)
-    .map((k) => ({ id: k.name, ...k.metadata }))
-    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+    .map((k) => ({ id: k.name, ...k.metadata, createdAt: k.metadata.createdAt ?? k.metadata.updatedAt }))
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
+
+// e.g. "Oct 12, 2026", in the viewer's timezone. Empty string if the input isn't a date.
+export function formatListDate(iso) {
+  const date = new Date(iso);
+  if (!iso || Number.isNaN(date.getTime())) return '';
+  return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
 export function prepareSetlistName(requestedName) {
@@ -63,23 +87,41 @@ export function prepareSetlistName(requestedName) {
   return { name };
 }
 
-export function prepareSongIdsForCreate(requestedIds, validIds) {
-  const songIds = filterValidSongIds(requestedIds, validIds);
-  if (songIds.length === 0) {
-    return { error: 'A set list needs at least one song' };
+function checkItems(requested, validIds) {
+  if (Array.isArray(requested)) {
+    const badHeading = requested.find((item) => {
+      if (!isHeading(item)) return false;
+      const length = item.section.trim().length;
+      return length < 1 || length > MAX_SECTION_NAME_LENGTH;
+    });
+    if (badHeading) {
+      return { error: `A section name must be 1-${MAX_SECTION_NAME_LENGTH} characters` };
+    }
   }
-  if (songIds.length > MAX_SETLIST_SIZE) {
+  const items = filterValidItems(requested, validIds);
+  const songCount = countSongs(items);
+  if (songCount > MAX_SETLIST_SIZE) {
     return { error: `A set list can hold at most ${MAX_SETLIST_SIZE} songs` };
   }
-  return { songIds };
+  if (items.length - songCount > MAX_SETLIST_SECTIONS) {
+    return { error: `A set list can have at most ${MAX_SETLIST_SECTIONS} sections` };
+  }
+  return { items };
+}
+
+export function prepareSongIdsForCreate(requestedIds, validIds) {
+  const result = checkItems(requestedIds, validIds);
+  if (result.error) return result;
+  if (countSongs(result.items) === 0) {
+    return { error: 'A set list needs at least one song' };
+  }
+  return { songIds: result.items };
 }
 
 export function prepareSongIdsForUpdate(requestedIds, validIds) {
-  const songIds = filterValidSongIds(requestedIds, validIds);
-  if (songIds.length > MAX_SETLIST_SIZE) {
-    return { error: `A set list can hold at most ${MAX_SETLIST_SIZE} songs` };
-  }
-  return { songIds };
+  const result = checkItems(requestedIds, validIds);
+  if (result.error) return result;
+  return { songIds: result.items };
 }
 
 export function jsonResponse(data, status = 200) {

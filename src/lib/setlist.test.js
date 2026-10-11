@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   MAX_SETLIST_SIZE,
-  filterValidSongIds,
+  filterValidItems,
   generateSetlistId,
   buildSetlistValue,
   prepareSongIdsForCreate,
@@ -16,21 +16,21 @@ test('MAX_SETLIST_SIZE is 50', () => {
   assert.equal(MAX_SETLIST_SIZE, 50);
 });
 
-test('filterValidSongIds keeps only IDs present in the valid set, in order', () => {
+test('filterValidItems keeps only IDs present in the valid set, in order', () => {
   const valid = new Set(['a', 'b', 'c']);
-  assert.deepEqual(filterValidSongIds(['a', 'x', 'b', 'y'], valid), ['a', 'b']);
+  assert.deepEqual(filterValidItems(['a', 'x', 'b', 'y'], valid), ['a', 'b']);
 });
 
-test('filterValidSongIds returns an empty array for non-array input', () => {
+test('filterValidItems returns an empty array for non-array input', () => {
   const valid = new Set(['a']);
-  assert.deepEqual(filterValidSongIds(null, valid), []);
-  assert.deepEqual(filterValidSongIds(undefined, valid), []);
-  assert.deepEqual(filterValidSongIds('a', valid), []);
+  assert.deepEqual(filterValidItems(null, valid), []);
+  assert.deepEqual(filterValidItems(undefined, valid), []);
+  assert.deepEqual(filterValidItems('a', valid), []);
 });
 
-test('filterValidSongIds ignores non-string entries', () => {
+test('filterValidItems ignores non-string entries', () => {
   const valid = new Set(['a']);
-  assert.deepEqual(filterValidSongIds(['a', 42, null, {}], valid), ['a']);
+  assert.deepEqual(filterValidItems(['a', 42, null, {}], valid), ['a']);
 });
 
 test('generateSetlistId returns a 10-character alphanumeric string', () => {
@@ -146,10 +146,11 @@ test('prepareSetlistName rejects a name longer than MAX_SETLIST_NAME_LENGTH char
 
 import { buildSetlistMetadata, toListEntries, parseLiveSetlist, markDeleted, SOFT_DELETE_TTL_SECONDS } from './setlist.js';
 
-test('buildSetlistMetadata summarises name, count and updatedAt', () => {
-  assert.deepEqual(buildSetlistMetadata(['a', 'b'], 'Sunday', '2026-10-11T00:00:00.000Z'), {
-    name: 'Sunday', count: 2, updatedAt: '2026-10-11T00:00:00.000Z',
-  });
+test('buildSetlistMetadata summarises name, song count, createdAt and updatedAt', () => {
+  assert.deepEqual(
+    buildSetlistMetadata(['a', { section: 'Praise' }, 'b'], 'Sunday', '2026-10-01T00:00:00.000Z', '2026-10-11T00:00:00.000Z'),
+    { name: 'Sunday', count: 2, createdAt: '2026-10-01T00:00:00.000Z', updatedAt: '2026-10-11T00:00:00.000Z' },
+  );
 });
 
 test('toListEntries drops deleted lists and sorts newest first', () => {
@@ -172,4 +173,88 @@ test('markDeleted flags the list and keeps its songs for the recovery window', (
   assert.equal(value.deleted, true);
   assert.deepEqual(value.songIds, ['a']);
   assert.equal(SOFT_DELETE_TTL_SECONDS, 30 * 24 * 60 * 60);
+});
+
+import { putSetlist, formatListDate } from './setlist.js';
+
+test('filterValidItems keeps headings trimmed, strips extra keys, and drops bad headings', () => {
+  const valid = new Set(['a', 'b']);
+  const items = ['a', { section: '  Praise  ', extra: 1 }, { section: '   ' }, { section: 'x'.repeat(61) }, 'b'];
+  assert.deepEqual(filterValidItems(items, valid), ['a', { section: 'Praise' }, 'b']);
+});
+
+test('filterValidItems collapses duplicate song ids but allows duplicate headings', () => {
+  const valid = new Set(['a']);
+  const items = ['a', { section: 'Praise' }, 'a', { section: 'Praise' }];
+  assert.deepEqual(filterValidItems(items, valid), ['a', { section: 'Praise' }, { section: 'Praise' }]);
+});
+
+test('prepareSongIdsForCreate rejects a list with headings but no songs', () => {
+  const result = prepareSongIdsForCreate([{ section: 'Praise' }], new Set(['a']));
+  assert.equal(result.error, 'A set list needs at least one song');
+});
+
+test('prepareSongIdsForCreate accepts songs with headings', () => {
+  const result = prepareSongIdsForCreate([{ section: 'Praise' }, 'a'], new Set(['a']));
+  assert.deepEqual(result.songIds, [{ section: 'Praise' }, 'a']);
+});
+
+test('prepareSongIdsForUpdate rejects an empty or overlong section name', () => {
+  const valid = new Set(['a']);
+  assert.equal(prepareSongIdsForUpdate(['a', { section: '  ' }], valid).error, 'A section name must be 1-60 characters');
+  assert.equal(prepareSongIdsForUpdate(['a', { section: 'x'.repeat(61) }], valid).error, 'A section name must be 1-60 characters');
+});
+
+test('prepareSongIdsForUpdate rejects more than 10 sections but allows exactly 10', () => {
+  const valid = new Set(['a']);
+  const tenHeadings = Array.from({ length: 10 }, (_, i) => ({ section: `S${i}` }));
+  assert.equal(prepareSongIdsForUpdate(tenHeadings, valid).error, undefined);
+  const elevenHeadings = [...tenHeadings, { section: 'S10' }];
+  assert.equal(prepareSongIdsForUpdate(elevenHeadings, valid).error, 'A set list can have at most 10 sections');
+});
+
+test('headings do not count toward the 50-song limit', () => {
+  const valid = new Set(Array.from({ length: 50 }, (_, i) => `id${i}`));
+  const items = [{ section: 'A' }, ...Array.from({ length: 50 }, (_, i) => `id${i}`)];
+  assert.equal(prepareSongIdsForUpdate(items, valid).error, undefined);
+});
+
+test('buildSetlistValue defaults createdAt to updatedAt and keeps a supplied createdAt', () => {
+  const fresh = JSON.parse(buildSetlistValue(['a'], 'X'));
+  assert.equal(fresh.createdAt, fresh.updatedAt);
+  const edited = JSON.parse(buildSetlistValue(['a'], 'X', '2026-01-01T00:00:00.000Z'));
+  assert.equal(edited.createdAt, '2026-01-01T00:00:00.000Z');
+  assert.notEqual(edited.updatedAt, edited.createdAt);
+});
+
+test('putSetlist writes the value and matching metadata, preserving supplied dates', async () => {
+  const calls = [];
+  const kv = { put: async (...args) => { calls.push(args); } };
+  const value = await putSetlist(kv, 'id1', ['a', { section: 'S' }], 'Name', {
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-02-02T00:00:00.000Z',
+  });
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0][0], 'id1');
+  assert.deepEqual(JSON.parse(calls[0][1]), JSON.parse(value));
+  assert.deepEqual(calls[0][2].metadata, {
+    name: 'Name', count: 1, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-02-02T00:00:00.000Z',
+  });
+});
+
+test('toListEntries falls back to updatedAt for legacy lists and sorts by created date', () => {
+  const keys = [
+    { name: 'legacy', metadata: { name: 'Legacy', count: 1, updatedAt: '2026-03-01T00:00:00.000Z' } },
+    { name: 'newer', metadata: { name: 'Newer', count: 1, createdAt: '2026-05-01T00:00:00.000Z', updatedAt: '2026-05-01T00:00:00.000Z' } },
+    { name: 'edited', metadata: { name: 'Edited', count: 1, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-09-09T00:00:00.000Z' } },
+  ];
+  const entries = toListEntries(keys);
+  assert.deepEqual(entries.map((e) => e.id), ['newer', 'legacy', 'edited']);
+  assert.equal(entries[1].createdAt, '2026-03-01T00:00:00.000Z');
+});
+
+test('formatListDate formats an ISO date and returns empty for bad input', () => {
+  assert.match(formatListDate('2026-10-12T12:00:00.000Z'), /^Oct 1[12], 2026$/);
+  assert.equal(formatListDate(undefined), '');
+  assert.equal(formatListDate('not a date'), '');
 });
