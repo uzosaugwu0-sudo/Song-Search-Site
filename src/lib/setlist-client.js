@@ -78,6 +78,14 @@ export function reorderInDraft(songId, direction) {
   return next;
 }
 
+// Applies a pure transform (items => items) to the draft and saves it.
+// Used for heading operations, which are addressed by position.
+export function updateDraft(transform) {
+  const next = transform(getDraftIds());
+  writeList(DRAFT_KEY, next);
+  return next;
+}
+
 // --- Library helpers: the local "My Playlists" list. Purely a per-browser
 // bookmark list — it never affects the set list stored server-side. ---
 

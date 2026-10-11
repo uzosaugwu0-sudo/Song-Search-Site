@@ -138,6 +138,10 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
       margin: var(--space-2) 0 calc(-1 * var(--space-1));
       color: var(--color-muted-foreground);
     }
+    .set-section-row {
+      font-weight: 700;
+      border-bottom: 2px solid var(--color-border-strong);
+    }
     .playlist-name-input {
       flex: 1;
       min-width: 200px;
@@ -254,7 +258,9 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
   <script type="application/json" id="songs-data" set:html={songsJson} />
   <script>
     import { normalizeTitle } from '../lib/normalize.js';
-    import { addToDraft, removeFromDraft, reorderInDraft, getDraftIds, getPlaylists, removePlaylistFromLibrary, saveDraftAsPlaylist, listSetlists, deleteSetlist } from '../lib/setlist-client.js';
+    import { isHeading, addHeading, renameHeading, removeAt, moveItem, askSectionName } from '../lib/sections.js';
+    import { formatListDate } from '../lib/setlist.js';
+    import { addToDraft, removeFromDraft, reorderInDraft, getDraftIds, getPlaylists, removePlaylistFromLibrary, saveDraftAsPlaylist, listSetlists, deleteSetlist, updateDraft } from '../lib/setlist-client.js';
 
     const data = JSON.parse(document.getElementById('songs-data').textContent);
     const input = document.getElementById('search');
@@ -389,6 +395,52 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
       return li;
     }
 
+    function buildDraftHeadingRow(heading, index, total) {
+      const li = document.createElement('li');
+      li.className = 'set-song-row set-section-row';
+
+      const title = document.createElement('span');
+      title.textContent = heading.section;
+      li.appendChild(title);
+
+      const controls = document.createElement('span');
+      controls.className = 'row-controls';
+
+      const upBtn = document.createElement('button');
+      upBtn.type = 'button';
+      upBtn.textContent = '↑';
+      upBtn.disabled = index === 0;
+      upBtn.addEventListener('click', () => { updateDraft((items) => moveItem(items, index, -1)); renderPlaylistsTab(); });
+      controls.appendChild(upBtn);
+
+      const downBtn = document.createElement('button');
+      downBtn.type = 'button';
+      downBtn.textContent = '↓';
+      downBtn.disabled = index === total - 1;
+      downBtn.addEventListener('click', () => { updateDraft((items) => moveItem(items, index, 1)); renderPlaylistsTab(); });
+      controls.appendChild(downBtn);
+
+      const renameBtn = document.createElement('button');
+      renameBtn.type = 'button';
+      renameBtn.textContent = 'Rename';
+      renameBtn.addEventListener('click', () => {
+        const name = askSectionName(heading.section);
+        if (!name) return;
+        updateDraft((items) => renameHeading(items, index, name));
+        renderPlaylistsTab();
+      });
+      controls.appendChild(renameBtn);
+
+      const removeBtn = document.createElement('button');
+      removeBtn.type = 'button';
+      removeBtn.textContent = 'Remove';
+      removeBtn.addEventListener('click', () => { updateDraft((items) => removeAt(items, index)); renderPlaylistsTab(); });
+      controls.appendChild(removeBtn);
+
+      li.appendChild(controls);
+      return li;
+    }
+
     function renderPlaylistsTab() {
       showTabs();
       pagination.style.display = 'none';
@@ -442,7 +494,8 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
           const savedName = nameInput.value.trim();
           const savedCount = draftSongs.length;
           const savedId = await saveDraftAsPlaylist(savedName);
-          justCreated.set(savedId, { id: savedId, name: savedName, count: savedCount, updatedAt: new Date().toISOString() });
+          const savedAt = new Date().toISOString();
+          justCreated.set(savedId, { id: savedId, name: savedName, count: savedCount, createdAt: savedAt, updatedAt: savedAt });
           publicLists = [justCreated.get(savedId), ...publicLists];
           draftNameValue = '';
           renderPlaylistsTab();
@@ -452,14 +505,31 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
         }
       });
 
+      const addSectionBtn = document.createElement('button');
+      addSectionBtn.type = 'button';
+      addSectionBtn.textContent = 'Add section';
+      addSectionBtn.addEventListener('click', () => {
+        const name = askSectionName();
+        if (!name) return;
+        updateDraft((items) => addHeading(items, name));
+        renderPlaylistsTab();
+      });
+
       controlsLi.appendChild(nameInput);
+      controlsLi.appendChild(addSectionBtn);
       controlsLi.appendChild(saveBtn);
       results.appendChild(controlsLi);
 
-      draftSongs.forEach((song, index) => {
+      draftIds.forEach((item, index) => {
+        if (isHeading(item)) {
+          results.appendChild(buildDraftHeadingRow(item, index, draftIds.length));
+          return;
+        }
+        const song = songById.get(item);
+        if (!song) return;
         const li = buildPlaylistSongRow(song, {
           showUp: index > 0,
-          showDown: index < draftSongs.length - 1,
+          showDown: index < draftIds.length - 1,
           onUp: () => { reorderInDraft(song.id, -1); renderPlaylistsTab(); },
           onDown: () => { reorderInDraft(song.id, 1); renderPlaylistsTab(); },
           onRemove: () => { removeFromDraft(song.id); renderPlaylistsTab(); },
@@ -484,7 +554,8 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
 
           const link = document.createElement('a');
           link.href = `/set/${playlist.id}/`;
-          link.textContent = playlist.name;
+          const playlistDate = formatListDate(publicLists.find((l) => l.id === playlist.id)?.createdAt);
+          link.textContent = playlistDate ? `${playlist.name} · ${playlistDate}` : playlist.name;
           li.appendChild(link);
 
           const removeBtn = document.createElement('button');
@@ -517,7 +588,8 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
 
         const link = document.createElement('a');
         link.href = `/set/${list.id}/`;
-        link.textContent = `${list.name} (${list.count} song${list.count === 1 ? '' : 's'})`;
+        const listDate = formatListDate(list.createdAt);
+        link.textContent = `${list.name} (${list.count} song${list.count === 1 ? '' : 's'})${listDate ? ` · ${listDate}` : ''}`;
         li.appendChild(link);
 
         const deleteBtn = document.createElement('button');
