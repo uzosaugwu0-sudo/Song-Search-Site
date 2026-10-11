@@ -124,6 +124,7 @@ const description = song
     const page = params.get('page');
     const set = params.get('set');
     const backLink = document.getElementById('back-link');
+    const FROM_TABS = { favorites: 'Favorites', recent: 'Recently Viewed', set: 'Service List' };
     if (set && /^[A-Za-z0-9]+$/.test(set)) {
       backLink.href = `/set/${set}/`;
       backLink.textContent = '← Back to service list';
@@ -132,6 +133,9 @@ const description = song
         .then((r) => (r.ok ? r.json() : null))
         .then((list) => { if (list?.name) backLink.textContent = `← Back to ${list.name}`; })
         .catch(() => {});
+    } else if (FROM_TABS[params.get('from')]) {
+      backLink.href = `/?tab=${params.get('from')}`;
+      backLink.textContent = `← Back to ${FROM_TABS[params.get('from')]}`;
     } else if (query) {
       backLink.href = `/?q=${encodeURIComponent(query)}`;
     } else if (page) {

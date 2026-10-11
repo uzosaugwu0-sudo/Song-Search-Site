@@ -329,7 +329,7 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
         return;
       }
       status.textContent = `${favSongs.length} favorite song${favSongs.length === 1 ? '' : 's'}`;
-      for (const song of favSongs) results.appendChild(buildCard(song, ''));
+      for (const song of favSongs) results.appendChild(buildCard(song, '', 1, 'favorites'));
     }
 
     function renderRecentTab() {
@@ -343,7 +343,7 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
         return;
       }
       status.textContent = `${recentSongs.length} recently viewed song${recentSongs.length === 1 ? '' : 's'}`;
-      for (const song of recentSongs) results.appendChild(buildCard(song, ''));
+      for (const song of recentSongs) results.appendChild(buildCard(song, '', 1, 'recent'));
     }
 
     function buildPlaylistSongRow(song, { showUp, showDown, onUp, onDown, onRemove }) {
@@ -351,7 +351,7 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
       li.className = 'set-song-row';
 
       const link = document.createElement('a');
-      link.href = `/song/${song.slug}/`;
+      link.href = `/song/${song.slug}/?from=set`;
       link.textContent = song.title;
       li.appendChild(link);
 
@@ -649,15 +649,17 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
       };
     }
 
-    function buildCard(song, query, page) {
+    function buildCard(song, query, page, from) {
       const li = document.createElement('li');
       li.className = 'result-item';
       li.dataset.songId = song.id;
       const a = document.createElement('a');
       a.className = 'result-card';
-      a.href = query
-        ? `/song/${song.slug}/?q=${encodeURIComponent(query)}`
-        : `/song/${song.slug}/${page > 1 ? `?page=${page}` : ''}`;
+      a.href = from
+        ? `/song/${song.slug}/?from=${from}`
+        : query
+          ? `/song/${song.slug}/?q=${encodeURIComponent(query)}`
+          : `/song/${song.slug}/${page > 1 ? `?page=${page}` : ''}`;
 
       const title = document.createElement('div');
       title.className = 'result-title';
@@ -884,8 +886,8 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
     const initialTab = params.get('tab');
     if (initialQuery) {
       renderSearch(initialQuery, { updateUrl: false });
-    } else if (initialTab === 'set') {
-      switchTab('set');
+    } else if (['favorites', 'recent', 'set'].includes(initialTab)) {
+      switchTab(initialTab);
     } else {
       renderBrowse(initialPage, { updateUrl: false });
     }
