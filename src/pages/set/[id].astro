@@ -37,76 +37,42 @@ const setInitJson = JSON.stringify({ setId: id, initialSongIds, initialName })
       <div id="set-app">
         <h1>
           <span id="playlist-name">{initialName}</span>
-          <input type="text" id="rename-input" value={initialName} hidden />
+          <input type="text" id="rename-input" class="input" value={initialName} hidden />
         </h1>
-        <p class="list-date"><time id="list-date" datetime={liveSet.createdAt ?? liveSet.updatedAt}></time></p>
+        <p class="list-date"><time id="list-date" class="badge" datetime={liveSet.createdAt ?? liveSet.updatedAt}></time></p>
         <div class="actions">
-          <button id="rename-btn">Rename</button>
-          <button id="copy-link">Copy link</button>
-          <button id="save-to-library">Save to Service List</button>
-          <button id="add-section">Add section</button>
-          <button id="delete-set" class="danger">Delete</button>
+          <button id="rename-btn" class="btn">Rename</button>
+          <button id="copy-link" class="btn btn-primary">Copy link</button>
+          <button id="save-to-library" class="btn">Save to Service List</button>
+          <button id="add-section" class="btn">Add section</button>
+          <button id="delete-set" class="btn btn-danger">Delete</button>
         </div>
         <p id="status"></p>
         <ul id="set-songs"></ul>
 
         <h2>Add a song</h2>
-        <input type="search" id="add-search" placeholder="Search by title or lyrics..." />
+        <input type="search" id="add-search" class="input" placeholder="Search by title or lyrics..." />
         <ul id="add-results"></ul>
       </div>
     )}
   </div>
 
   <style is:global>
-    .page {
-      max-width: 680px;
-      margin: 0 auto;
-    }
     .status, #status {
       color: var(--color-muted-foreground);
       margin: var(--space-4) 0;
     }
+    .list-date { margin: calc(var(--space-2) * -1) 0 var(--space-4); }
     .actions {
       display: flex;
       flex-wrap: wrap;
       gap: var(--space-3);
       margin-bottom: var(--space-4);
     }
-    .actions button {
-      display: inline-flex;
-      align-items: center;
-      min-height: var(--control-height);
-      padding: 0 var(--space-5);
-      border: 1px solid var(--color-border);
-      border-radius: var(--radius-control);
-      background: var(--color-card);
-      color: var(--color-card-foreground);
-      font-size: 0.95rem;
-    }
-    .actions button:hover { border-color: var(--color-border-strong); }
-    .actions button.danger {
-      color: var(--color-danger);
-      border-color: var(--color-danger-border);
-    }
-    #copy-link {
-      background: var(--color-primary);
-      color: var(--color-on-primary);
-      border-color: var(--color-primary);
-      font-weight: 600;
-      transition: opacity 150ms ease;
-    }
-    #copy-link:hover { opacity: 0.85; border-color: var(--color-primary); }
     #rename-input {
       font-family: 'Sora', ui-sans-serif, system-ui, sans-serif;
       font-weight: 800;
-      font-size: 1.5rem;
-      border: 1px solid var(--color-border-strong);
-      border-radius: var(--radius-control);
-      background: var(--color-card);
-      color: var(--color-card-foreground);
-      padding: var(--space-1) var(--space-2);
-      box-sizing: border-box;
-      width: 100%;
+      font-size: var(--text-xl);
       max-width: 400px;
     }
     #set-songs, #add-results {
@@ -117,24 +83,9 @@ const setInitJson = JSON.stringify({ setId: id, initialSongIds, initialName })
       flex-direction: column;
       gap: var(--space-2);
     }
-    .set-song {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: var(--space-3);
-      padding: var(--space-3) var(--space-4);
-      border: 1px solid var(--color-border);
-      border-radius: var(--radius-control);
-      background: var(--color-card);
-    }
-    .set-song a {
-      font-weight: 600;
-      text-decoration: none;
-    }
-    .set-song a:hover { text-decoration: underline; }
-    .list-date {
+    .set-song .author {
       color: var(--color-muted-foreground);
-      margin: calc(var(--space-2) * -1) 0 var(--space-4);
+      font-size: var(--text-sm);
     }
     .set-group { list-style: none; }
     .set-group > details > summary {
@@ -145,10 +96,7 @@ const setInitJson = JSON.stringify({ setId: id, initialSongIds, initialName })
       cursor: pointer;
     }
     .set-group > details > summary::-webkit-details-marker { display: none; }
-    .set-group > details > summary::before {
-      content: '▸';
-      color: var(--color-muted-foreground);
-    }
+    .set-group > details > summary::before { content: '▸'; color: var(--color-muted-foreground); }
     .set-group > details[open] > summary::before { content: '▾'; }
     .set-group > details > summary > .set-section { flex: 1; }
     .set-group-songs {
@@ -165,53 +113,8 @@ const setInitJson = JSON.stringify({ setId: id, initialSongIds, initialName })
       font-weight: 700;
       margin-top: var(--space-3);
     }
-    .set-song .author {
-      color: var(--color-muted-foreground);
-      font-size: 0.9rem;
-    }
-    .set-song .controls {
-      margin-left: auto;
-      display: flex;
-      gap: var(--space-2);
-    }
-    .set-song .controls button {
-      min-width: var(--control-height-compact);
-      min-height: var(--control-height-compact);
-      border: 1px solid var(--color-border);
-      background: var(--color-card);
-      color: var(--color-card-foreground);
-      border-radius: var(--radius-sm);
-      padding: 0 var(--space-3);
-    }
-    .set-song .controls button:last-child {
-      color: var(--color-danger);
-      border-color: var(--color-danger-border);
-    }
-    .set-song .controls button:disabled {
-      opacity: 0.4;
-      cursor: default;
-    }
-    #add-search {
-      width: 100%;
-      min-height: var(--control-height);
-      padding: 0 var(--space-4);
-      font-size: 1rem;
-      border: 1px solid var(--color-border-strong);
-      border-radius: var(--radius-control);
-      background: var(--color-card);
-      color: var(--color-card-foreground);
-      margin-top: var(--space-2);
-    }
-    #add-results button {
-      width: 100%;
-      text-align: left;
-      min-height: var(--control-height);
-      padding: var(--space-3) var(--space-4);
-      border: 1px solid var(--color-border);
-      border-radius: var(--radius-control);
-      background: var(--color-card);
-      color: var(--color-card-foreground);
-    }
+    #add-search { margin-top: var(--space-2); }
+    #add-results .btn { width: 100%; justify-content: flex-start; font-weight: 500; }
   </style>
 
   <script type="application/json" id="songs-data" set:html={songsJson} />
@@ -260,9 +163,10 @@ const setInitJson = JSON.stringify({ setId: id, initialSongIds, initialName })
         if (!song) return null;
 
         const li = document.createElement('li');
-        li.className = 'set-song';
+        li.className = 'set-song row';
 
         const link = document.createElement('a');
+        link.className = 'row-title';
         link.href = `/song/${song.slug}/?set=${encodeURIComponent(setId)}`;
         link.textContent = song.title;
         li.appendChild(link);
@@ -275,10 +179,11 @@ const setInitJson = JSON.stringify({ setId: id, initialSongIds, initialName })
         }
 
         const controls = document.createElement('span');
-        controls.className = 'controls';
+        controls.className = 'controls row-controls';
 
         const upBtn = document.createElement('button');
         upBtn.type = 'button';
+        upBtn.className = 'btn btn-sm';
         upBtn.textContent = '↑';
         upBtn.disabled = index === 0;
         upBtn.addEventListener('click', () => reorder(index, -1));
@@ -286,6 +191,7 @@ const setInitJson = JSON.stringify({ setId: id, initialSongIds, initialName })
 
         const downBtn = document.createElement('button');
         downBtn.type = 'button';
+        downBtn.className = 'btn btn-sm';
         downBtn.textContent = '↓';
         downBtn.disabled = index === currentIds.length - 1;
         downBtn.addEventListener('click', () => reorder(index, 1));
@@ -293,6 +199,7 @@ const setInitJson = JSON.stringify({ setId: id, initialSongIds, initialName })
 
         const removeBtn = document.createElement('button');
         removeBtn.type = 'button';
+        removeBtn.className = 'btn btn-sm btn-danger';
         removeBtn.textContent = 'Remove';
         removeBtn.addEventListener('click', () => removeAt(index));
         controls.appendChild(removeBtn);
@@ -330,17 +237,18 @@ const setInitJson = JSON.stringify({ setId: id, initialSongIds, initialName })
 
       function buildHeadingRow(heading, index, songCount) {
         const li = document.createElement('div');
-        li.className = 'set-song set-section';
+        li.className = 'set-song set-section row';
 
         const title = document.createElement('span');
         title.textContent = `${heading.section} (${songCount})`;
         li.appendChild(title);
 
         const controls = document.createElement('span');
-        controls.className = 'controls';
+        controls.className = 'controls row-controls';
 
         const upBtn = document.createElement('button');
         upBtn.type = 'button';
+        upBtn.className = 'btn btn-sm';
         upBtn.textContent = '↑';
         upBtn.disabled = index === 0;
         upBtn.addEventListener('click', () => reorder(index, -1));
@@ -348,6 +256,7 @@ const setInitJson = JSON.stringify({ setId: id, initialSongIds, initialName })
 
         const downBtn = document.createElement('button');
         downBtn.type = 'button';
+        downBtn.className = 'btn btn-sm';
         downBtn.textContent = '↓';
         downBtn.disabled = index === currentIds.length - 1;
         downBtn.addEventListener('click', () => reorder(index, 1));
@@ -355,6 +264,7 @@ const setInitJson = JSON.stringify({ setId: id, initialSongIds, initialName })
 
         const renameBtn = document.createElement('button');
         renameBtn.type = 'button';
+        renameBtn.className = 'btn btn-sm';
         renameBtn.textContent = 'Rename';
         renameBtn.addEventListener('click', async () => {
           const name = await askSectionName(heading.section);
@@ -364,6 +274,7 @@ const setInitJson = JSON.stringify({ setId: id, initialSongIds, initialName })
 
         const removeBtn = document.createElement('button');
         removeBtn.type = 'button';
+        removeBtn.className = 'btn btn-sm btn-danger';
         removeBtn.textContent = 'Remove';
         removeBtn.addEventListener('click', () => removeAt(index));
         controls.appendChild(removeBtn);
@@ -488,6 +399,7 @@ const setInitJson = JSON.stringify({ setId: id, initialSongIds, initialName })
           const li = document.createElement('li');
           const btn = document.createElement('button');
           btn.type = 'button';
+          btn.className = 'btn';
           btn.textContent = `+ ${song.title}`;
           btn.addEventListener('click', () => {
             addSong(song.id);
