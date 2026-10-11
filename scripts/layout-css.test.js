@@ -34,3 +34,12 @@ test('tab focus ring is drawn inside the tab so the scrolling bar cannot clip it
 test('list links in rows keep a comfortable tap target', () => {
   assert.ok(rule(components, '.row-title').includes('min-height: var(--control-height-compact)'));
 });
+
+test('danger buttons keep their red border while hovered', () => {
+  const hover = rule(components, '.btn-danger:hover:not(:disabled)');
+  assert.ok(hover.includes('border-color: var(--color-danger-border)'));
+});
+
+test('an empty date badge is hidden instead of showing an empty pill', () => {
+  assert.ok(rule(components, '.badge:empty').includes('display: none'));
+});

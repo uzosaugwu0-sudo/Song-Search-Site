@@ -58,6 +58,8 @@ const PAIRS = [
   ['focus ring on card', '--color-primary', '--color-card', 3],
   ['primary text on primary-soft', '--color-primary', '--color-primary-soft', 4.5],
   ['foreground on primary-soft', '--color-foreground', '--color-primary-soft', 4.5],
+  ['danger text on muted (button hover)', '--color-danger', '--color-muted', 4.5],
+  ['primary text on muted (button hover)', '--color-primary', '--color-muted', 4.5],
 ];
 
 function failures(tokens) {
