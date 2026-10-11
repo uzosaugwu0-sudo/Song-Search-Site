@@ -258,3 +258,13 @@ test('formatListDate formats an ISO date and returns empty for bad input', () =>
   assert.equal(formatListDate(undefined), '');
   assert.equal(formatListDate('not a date'), '');
 });
+
+import { needsBackfill } from './setlist.js';
+
+test('needsBackfill is true only for lists with no metadata at all', () => {
+  assert.equal(needsBackfill({ name: 'a' }), true);
+  assert.equal(needsBackfill({ name: 'a', metadata: null }), true);
+  // Pre-createdAt lists already show their updatedAt as the date; rewriting them risks overwriting a fresh edit.
+  assert.equal(needsBackfill({ name: 'a', metadata: { name: 'A', count: 1, updatedAt: '2026-01-01T00:00:00.000Z' } }), false);
+  assert.equal(needsBackfill({ name: 'a', metadata: { deleted: true } }), false);
+});

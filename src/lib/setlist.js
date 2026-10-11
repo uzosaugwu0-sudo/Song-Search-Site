@@ -51,6 +51,13 @@ export async function putSetlist(kv, id, songIds, name, { createdAt, updatedAt }
   return value;
 }
 
+// Only lists saved before metadata existed need rewriting. Lists that merely lack
+// createdAt already show their updatedAt as the date, and rewriting them from a
+// possibly stale read could overwrite a fresh edit.
+export function needsBackfill(key) {
+  return !key.metadata;
+}
+
 // Returns the parsed list, or null if it doesn't exist or was soft-deleted.
 export function parseLiveSetlist(raw) {
   if (raw === null) return null;

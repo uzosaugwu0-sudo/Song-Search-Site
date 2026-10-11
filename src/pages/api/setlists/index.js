@@ -1,4 +1,4 @@
-import { prepareSongIdsForCreate, prepareSetlistName, generateSetlistId, putSetlist, buildSetlistMetadata, toListEntries, parseLiveSetlist, jsonResponse } from '../../../lib/setlist.js';
+import { prepareSongIdsForCreate, prepareSetlistName, generateSetlistId, putSetlist, buildSetlistMetadata, needsBackfill, toListEntries, parseLiveSetlist, jsonResponse } from '../../../lib/setlist.js';
 import { loadSongs } from '../../../lib/songs-data.js';
 
 export const prerender = false;
@@ -8,9 +8,9 @@ export const prerender = false;
 export async function GET({ locals }) {
   const kv = locals.runtime.env.SETLISTS;
   const { keys } = await kv.list({ limit: 1000 });
-  // Lists saved before metadata or createdAt existed: read once, rewrite with both,
-  // keeping their last-updated time unchanged (it becomes their date).
-  const legacy = keys.filter((k) => !k.metadata || (!k.metadata.deleted && !k.metadata.createdAt));
+  // Lists saved before metadata existed: read once, rewrite with metadata, keeping
+  // their last-updated time unchanged (it becomes their date).
+  const legacy = keys.filter(needsBackfill);
   for (const key of legacy) {
     const data = parseLiveSetlist(await kv.get(key.name));
     if (!data) continue;

@@ -26,8 +26,9 @@ A list value in KV (`SETLISTS`) becomes:
 - `createdAt` is set on POST and copied unchanged on every PUT and soft delete.
   `updatedAt` changes on every save.
 - Legacy lists with no `createdAt`: the effective date is `createdAt ?? updatedAt`.
-  The public listing's existing backfill pass also writes `createdAt = updatedAt` to
-  them (in value and KV metadata) so they stop being legacy.
+  Lists that merely lack `createdAt` are never rewritten just for it (a rewrite from a
+  stale read could overwrite a fresh edit); the fallback is applied wherever dates are read.
+  Only lists with no KV metadata at all are backfilled, keeping their `updatedAt`.
 - KV metadata becomes `{ name, count, createdAt, updatedAt }`. `count` counts songs
   only, not headings.
 
