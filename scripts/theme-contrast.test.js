@@ -56,6 +56,8 @@ const PAIRS = [
   ['input outline on card', '--color-border-strong', '--color-card', 3],
   ['focus ring on background', '--color-primary', '--color-background', 3],
   ['focus ring on card', '--color-primary', '--color-card', 3],
+  ['primary text on primary-soft', '--color-primary', '--color-primary-soft', 4.5],
+  ['foreground on primary-soft', '--color-foreground', '--color-primary-soft', 4.5],
 ];
 
 function failures(tokens) {
