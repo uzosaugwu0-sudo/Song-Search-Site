@@ -1,0 +1,330 @@
+<!doctype html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Home redesign mockup</title>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+    :root {
+      --color-background: #f6f7fb;
+      --color-foreground: #171a2b;
+      --color-card: #ffffff;
+      --color-card-foreground: #171a2b;
+      --color-muted: #eceef7;
+      --color-muted-foreground: #646a82;
+      --color-border: #e4e6f0;
+      --color-border-strong: #848aa3;
+      --color-primary: #4a3b9c;
+      --color-on-primary: #ffffff;
+      --color-accent: #c8a24a;
+      --color-on-accent: #3a2f12;
+      --color-danger: #b3261e;
+      --color-danger-border: #f0c9c6;
+      --color-primary-soft: #ece9fb;
+      --shadow-card: 0 1px 3px rgba(23, 26, 43, 0.06), 0 8px 24px rgba(23, 26, 43, 0.06);
+      --shadow-raised: 0 2px 4px rgba(23, 26, 43, 0.08), 0 12px 28px rgba(23, 26, 43, 0.1);
+      --radius-sm: 8px;
+      --radius-control: 12px;
+      --radius-card: 16px;
+      --radius-pill: 999px;
+      --space-1: 4px;
+      --space-2: 8px;
+      --space-3: 12px;
+      --space-4: 16px;
+      --space-5: 24px;
+      --space-6: 32px;
+      --control-height: 44px;
+      --control-height-compact: 32px;
+      --focus-ring: 2px solid var(--color-primary);
+      --text-xs: 0.78rem;
+      --text-sm: 0.9rem;
+      --text-base: 1rem;
+      --text-lg: 1.15rem;
+      --text-xl: 1.4rem;
+      --text-2xl: clamp(1.6rem, 4vw, 2.1rem);
+      color-scheme: light dark;
+    }
+    :root[data-theme="light"] {
+      color-scheme: light;
+    }
+    :root[data-theme="dark"] {
+      --color-background: #12111c;
+      --color-foreground: #ecebf7;
+      --color-card: #1c1b2b;
+      --color-card-foreground: #ecebf7;
+      --color-muted: #25243a;
+      --color-muted-foreground: #a09fba;
+      --color-border: #302f45;
+      --color-border-strong: #6b6a8a;
+      --color-primary: #9a8cf0;
+      --color-on-primary: #14121f;
+      --color-accent: #d9b45c;
+      --color-on-accent: #2a2008;
+      --color-danger: #f2766d;
+      --color-danger-border: #5a3030;
+      --color-primary-soft: #2b2850;
+      --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.3);
+      --shadow-raised: 0 2px 4px rgba(0, 0, 0, 0.35), 0 12px 28px rgba(0, 0, 0, 0.4);
+      color-scheme: dark;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        --color-background: #12111c;
+        --color-foreground: #ecebf7;
+        --color-card: #1c1b2b;
+        --color-card-foreground: #ecebf7;
+        --color-muted: #25243a;
+        --color-muted-foreground: #a09fba;
+        --color-border: #302f45;
+        --color-border-strong: #6b6a8a;
+        --color-primary: #9a8cf0;
+        --color-on-primary: #14121f;
+        --color-accent: #d9b45c;
+        --color-on-accent: #2a2008;
+        --color-danger: #f2766d;
+        --color-danger-border: #5a3030;
+        --color-primary-soft: #2b2850;
+        --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.3);
+        --shadow-raised: 0 2px 4px rgba(0, 0, 0, 0.35), 0 12px 28px rgba(0, 0, 0, 0.4);
+      }
+    }
+    a { color: var(--color-primary); }
+    h1 {
+      font-family: 'Sora', ui-sans-serif, system-ui, sans-serif;
+      font-weight: 800;
+      margin: 0 0 var(--space-2);
+    }
+    :where(button, input, select, textarea) { font-family: inherit; }
+    :where(button:not(:disabled)) { cursor: pointer; }
+    :where(a, button, input, select, textarea):focus-visible {
+      outline: var(--focus-ring);
+      outline-offset: 2px;
+    }
+    .theme-toggle .icon-sun { display: none; }
+    :root[data-theme="dark"] .theme-toggle .icon-moon { display: none; }
+    :root[data-theme="dark"] .theme-toggle .icon-sun { display: block; }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) .theme-toggle .icon-moon { display: none; }
+      :root:not([data-theme="light"]) .theme-toggle .icon-sun { display: block; }
+    }
+  </style><style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--color-background);
+      color: var(--color-foreground);
+      font-family: 'Sora', ui-sans-serif, system-ui, sans-serif;
+      line-height: 1.6;
+    }
+    .container {
+      max-width: 1040px;
+      margin: 0 auto;
+      padding: var(--space-6) var(--space-5) 64px;
+    }
+    .site-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: var(--space-3);
+      margin-bottom: var(--space-5);
+      padding-bottom: var(--space-4);
+      border-bottom: 1px solid var(--color-border);
+    }
+    .logo-link { display: block; line-height: 0; }
+    .site-logo {
+      display: block;
+      height: 48px;
+      width: auto;
+    }
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
+    .admin-link, .theme-toggle { color: var(--color-muted-foreground); }
+    .admin-link:hover, .theme-toggle:hover { color: var(--color-foreground); }
+  </style><style>/* Shared components. Colours, spacing, radii and type sizes come from the tokens in Layout.astro. */
+
+.page { max-width: 680px; margin: 0 auto; }
+
+/* Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: var(--control-height);
+  padding: 0 var(--space-5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-card);
+  color: var(--color-card-foreground);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  line-height: 1.2;
+  text-decoration: none;
+  transition: background 150ms ease, border-color 150ms ease, color 150ms ease;
+}
+.btn:hover:not(:disabled) { background: var(--color-muted); border-color: var(--color-border-strong); }
+.btn:disabled { opacity: 0.5; cursor: default; }
+.btn-primary {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: var(--color-on-primary);
+}
+.btn-primary:hover:not(:disabled) { background: var(--color-primary); border-color: var(--color-primary); opacity: 0.9; }
+.btn-danger { color: var(--color-danger); border-color: var(--color-danger-border); }
+.btn-sm { min-height: var(--control-height-compact); padding: 0 var(--space-3); }
+.btn-icon { width: var(--control-height); padding: 0; border-radius: var(--radius-pill); }
+.btn-icon.btn-sm { width: var(--control-height-compact); }
+
+/* Text input */
+.input {
+  width: 100%;
+  min-height: var(--control-height);
+  padding: 0 var(--space-4);
+  font-size: var(--text-base);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-control);
+  background: var(--color-card);
+  color: var(--color-card-foreground);
+}
+
+/* Surfaces */
+.card {
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+}
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-card);
+}
+.row-title {
+  font-weight: 600;
+  color: var(--color-card-foreground);
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+.row-title:hover { text-decoration: underline; }
+.row-controls { margin-left: auto; display: flex; flex-wrap: wrap; gap: var(--space-2); }
+
+/* Small labels */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px var(--space-3);
+  border-radius: var(--radius-pill);
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.section-label {
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-muted-foreground);
+}
+
+/* Site dialogs (src/lib/dialogs.js) */
+.site-dialog {
+  width: min(92vw, 420px);
+  padding: var(--space-5);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-card);
+  background: var(--color-card);
+  color: var(--color-card-foreground);
+  box-shadow: var(--shadow-raised);
+}
+.site-dialog::backdrop { background: rgba(0, 0, 0, 0.45); }
+.site-dialog p { margin: 0 0 var(--space-4); }
+.site-dialog .input { margin-bottom: var(--space-4); }
+.site-dialog-actions { display: flex; justify-content: flex-end; gap: var(--space-3); }
+
+@media (prefers-reduced-motion: reduce) {
+  .btn { transition: none; }
+}
+</style><style>
+.search-field { position: relative; }
+.search-field .search-icon { position: absolute; left: var(--space-4); top: 50%; transform: translateY(-50%); color: var(--color-muted-foreground); pointer-events: none; }
+.search-field .input { padding-left: calc(var(--space-4) + 28px); min-height: 52px; font-size: var(--text-lg); box-shadow: var(--shadow-card); }
+.hint { color: var(--color-muted-foreground); font-size: var(--text-sm); margin: var(--space-2) 0 0; }
+#tabs { display: flex; gap: var(--space-5); margin-top: var(--space-5); border-bottom: 1px solid var(--color-border); overflow-x: auto; }
+.tab { appearance: none; background: none; border: none; border-bottom: 3px solid transparent; margin-bottom: -1px; padding: var(--space-3) 0; font: inherit; font-size: var(--text-sm); font-weight: 600; white-space: nowrap; color: var(--color-muted-foreground); }
+.tab:hover { color: var(--color-foreground); }
+.tab.active { color: var(--color-foreground); border-bottom-color: var(--color-accent); }
+#results { list-style: none; margin: var(--space-5) 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: var(--space-4); }
+.result-item { position: relative; }
+.result-card { display: block; padding: var(--space-4) calc(var(--control-height-compact) + var(--space-6)) var(--space-4) var(--space-5); color: var(--color-card-foreground); text-decoration: none; transition: border-color 150ms ease, box-shadow 150ms ease; }
+.result-card:hover { border-color: var(--color-primary); box-shadow: var(--shadow-raised); }
+.result-title { font-size: var(--text-lg); font-weight: 700; }
+.result-author { color: var(--color-muted-foreground); font-size: var(--text-sm); }
+.add-to-set-btn { position: absolute; top: var(--space-3); right: var(--space-3); color: var(--color-primary); font-size: 1.1rem; }
+.stack { grid-column: 1 / -1; display: flex; flex-direction: column; gap: var(--space-2); }
+.stack .section-label { margin-top: var(--space-4); }
+details > summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: var(--space-2); }
+details > summary::-webkit-details-marker { display: none; }
+details > summary::before { content: '▸'; color: var(--color-muted-foreground); }
+details[open] > summary::before { content: '▾'; }
+details > summary > .row { flex: 1; }
+.date-group > summary { padding: var(--space-3) var(--space-4); border: 1px solid var(--color-border); border-radius: var(--radius-control); background: var(--color-card); font-weight: 600; }
+.group-songs { list-style: none; margin: var(--space-2) 0 0; padding: 0 0 0 var(--space-4); display: flex; flex-direction: column; gap: var(--space-2); }
+</style></head>
+<body>
+<div class="container">
+  <div class="site-header">
+    <a href="/" class="logo-link"><img src="../../../public/logo.png" alt="Church logo" class="site-logo" /></a>
+    <div class="header-actions">
+      <a href="#" class="admin-link btn">Admin</a>
+      <button type="button" id="theme-toggle" class="theme-toggle btn btn-icon" aria-label="Toggle theme">&#9680;</button>
+    </div>
+  </div>
+  <h1>Wisdom Assembly Song Search</h1>
+  <div class="search-field">
+    <svg class="search-icon" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+    <input class="input" placeholder="Search by title or lyrics..." />
+  </div>
+  <p class="hint">Try a phrase from the lyrics, or the title.</p>
+  <div id="tabs">
+    <button class="tab">All Songs</button><button class="tab">Favorites</button>
+    <button class="tab">Recently Viewed</button><button class="tab active">Service List</button>
+  </div>
+  <ul id="results">
+    <li class="stack">
+      <span class="section-label">Currently building</span>
+      <div class="row"><input class="input" style="flex:1;min-width:180px" placeholder="Name this service list" /><button class="btn">Add section</button><button class="btn btn-primary">Save</button></div>
+      <details open><summary><div class="row section-row" style="border-bottom:2px solid var(--color-border-strong)"><strong>Opening Worship (1)</strong><span class="row-controls"><button class="btn btn-sm">Rename</button><button class="btn btn-sm btn-danger">Remove</button></span></div></summary>
+        <ul class="group-songs"><li><div class="row"><a class="row-title" href="#">Great Is Thy Faithfulness</a><span class="row-controls"><button class="btn btn-sm">&uarr;</button><button class="btn btn-sm">&darr;</button><button class="btn btn-sm btn-danger">Remove</button></span></div></li></ul>
+      </details>
+      <span class="section-label">Your Service Lists</span>
+      <div class="row"><a class="row-title" href="#">Sunday Service</a><span class="badge">Oct 12, 2026</span><span class="row-controls"><button class="btn btn-sm">Forget</button></span></div>
+      <span class="section-label">All Service Lists</span>
+      <details class="date-group" open><summary>Oct 12, 2026 &middot; 2 lists</summary>
+        <ul class="group-songs">
+          <li><div class="row"><a class="row-title" href="#">Sunday Service</a><span class="badge">12 songs</span><span class="row-controls"><button class="btn btn-sm btn-danger">Delete</button></span></div></li>
+          <li><div class="row"><a class="row-title" href="#">Evening Prayer — a rather long list name that must wrap nicely</a><span class="badge">5 songs</span><span class="row-controls"><button class="btn btn-sm btn-danger">Delete</button></span></div></li>
+        </ul>
+      </details>
+      <details class="date-group"><summary>Oct 5, 2026 &middot; 1 list</summary>
+        <ul class="group-songs"><li><div class="row"><a class="row-title" href="#">Youth Night</a><span class="badge">8 songs</span><span class="row-controls"><button class="btn btn-sm btn-danger">Delete</button></span></div></li></ul>
+      </details>
+    </li>
+  </ul>
+  <ul id="results" style="margin-top:var(--space-6)">
+    <li class="result-item"><a class="card result-card" href="#"><div class="result-title">Amazing Grace</div><div class="result-author">John Newton</div></a><button class="btn btn-icon btn-sm add-to-set-btn" aria-label="Add to list">+</button></li>
+    <li class="result-item"><a class="card result-card" href="#"><div class="result-title">How Great Thou Art</div><div class="result-author">Carl Boberg</div></a><button class="btn btn-icon btn-sm add-to-set-btn" aria-label="Add to list">+</button></li>
+  </ul>
+</div>
+<script>
+  document.getElementById('theme-toggle').addEventListener('click', () => {
+    const root = document.documentElement;
+    root.setAttribute('data-theme', root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+  });
+</script></body></html>
