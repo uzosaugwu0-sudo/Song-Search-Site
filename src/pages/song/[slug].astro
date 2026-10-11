@@ -127,6 +127,11 @@ const description = song
     if (set && /^[A-Za-z0-9]+$/.test(set)) {
       backLink.href = `/set/${set}/`;
       backLink.textContent = '← Back to service list';
+      // Swap in the list's title once loaded; the generic text stays if the fetch fails.
+      fetch(`/api/setlists/${set}`)
+        .then((r) => (r.ok ? r.json() : null))
+        .then((list) => { if (list?.name) backLink.textContent = `← Back to ${list.name}`; })
+        .catch(() => {});
     } else if (query) {
       backLink.href = `/?q=${encodeURIComponent(query)}`;
     } else if (page) {
