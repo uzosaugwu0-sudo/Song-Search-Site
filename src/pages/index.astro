@@ -9,7 +9,10 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
 ---
 <Layout title="Wisdom Assembly Song Search">
   <h1>Wisdom Assembly Song Search</h1>
-  <input type="search" id="search" placeholder="Search by title or lyrics..." autofocus />
+  <div class="search-field">
+    <svg class="search-icon" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+    <input type="search" id="search" class="input" placeholder="Search by title or lyrics..." autofocus />
+  </div>
   <p class="hint">Try a phrase from the lyrics, or the title.</p>
 
   <div id="tabs">
@@ -24,20 +27,24 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
   <nav id="pagination"></nav>
 
   <style is:global>
-    #search {
-      width: 100%;
-      min-height: var(--control-height);
-      padding: var(--space-4) var(--space-5);
-      font-size: 1.05rem;
-      border: 1px solid var(--color-border-strong);
-      border-radius: var(--radius-control);
-      background: var(--color-card);
-      color: var(--color-card-foreground);
+    .search-field { position: relative; }
+    .search-field .search-icon {
+      position: absolute;
+      left: var(--space-4);
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--color-muted-foreground);
+      pointer-events: none;
+    }
+    .search-field .input {
+      padding-left: calc(var(--space-4) + 28px);
+      min-height: 52px;
+      font-size: var(--text-lg);
       box-shadow: var(--shadow-card);
     }
     .hint {
       color: var(--color-muted-foreground);
-      font-size: 0.9rem;
+      font-size: var(--text-sm);
       margin: var(--space-2) 0 0;
     }
     #status {
@@ -46,35 +53,28 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
     }
     #tabs {
       display: flex;
-      gap: var(--space-1);
-      width: fit-content;
-      max-width: 100%;
+      gap: var(--space-5);
       margin-top: var(--space-5);
-      padding: var(--space-1);
-      background: var(--color-muted);
-      border-radius: var(--radius-control);
+      border-bottom: 1px solid var(--color-border);
       overflow-x: auto;
     }
     .tab {
       appearance: none;
       background: none;
       border: none;
-      border-radius: var(--radius-sm);
-      min-height: var(--control-height-compact);
-      padding: 0 var(--space-4);
-      font-family: 'Sora', ui-sans-serif, system-ui, sans-serif;
-      font-size: 0.95rem;
+      border-bottom: 3px solid transparent;
+      margin-bottom: -1px;
+      padding: var(--space-3) 0;
+      font-family: inherit;
+      font-size: var(--text-sm);
+      font-weight: 600;
       white-space: nowrap;
       color: var(--color-muted-foreground);
     }
-    .tab:hover {
-      color: var(--color-foreground);
-    }
+    .tab:hover { color: var(--color-foreground); }
     .tab.active {
-      background: var(--color-card);
       color: var(--color-foreground);
-      font-weight: 600;
-      box-shadow: inset 0 -2px 0 var(--color-accent);
+      border-bottom-color: var(--color-accent);
     }
     #results {
       list-style: none;
@@ -84,29 +84,14 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
       grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
       gap: var(--space-4);
     }
-    .result-item {
-      position: relative;
-    }
+    .result-item { position: relative; }
     .add-to-set-btn {
       position: absolute;
       top: var(--space-3);
       right: var(--space-3);
-      width: var(--control-height-compact);
-      height: var(--control-height-compact);
-      border-radius: var(--radius-pill);
-      border: 1px solid var(--color-border);
-      background: var(--color-card);
       color: var(--color-primary);
       font-size: 1.1rem;
       line-height: 1;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .add-to-set-btn:hover {
-      background: var(--color-primary);
-      color: var(--color-on-primary);
-      border-color: var(--color-primary);
     }
     .draft-group, .date-group { grid-column: 1 / -1; list-style: none; }
     .draft-group > details > summary, .date-group > details > summary {
@@ -115,9 +100,7 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
       gap: var(--space-2);
       list-style: none;
       cursor: pointer;
-      font-weight: 600;
     }
-    .draft-group > details > summary { font-weight: inherit; }
     .draft-group > details > summary > .set-section-row { flex: 1; }
     .draft-group > details > summary::-webkit-details-marker,
     .date-group > details > summary::-webkit-details-marker { display: none; }
@@ -130,6 +113,7 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
       border: 1px solid var(--color-border);
       border-radius: var(--radius-control);
       background: var(--color-card);
+      font-weight: 600;
     }
     .group-songs {
       list-style: none;
@@ -141,118 +125,33 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
     }
     .set-controls {
       display: flex;
+      flex-wrap: wrap;
       gap: var(--space-3);
       align-items: center;
       grid-column: 1 / -1;
     }
-    .set-controls button, .set-controls a {
-      display: inline-flex;
-      align-items: center;
-      min-height: var(--control-height);
-      padding: 0 var(--space-4);
-      border-radius: var(--radius-control);
-      border: 1px solid var(--color-border);
-      background: var(--color-card);
-      color: var(--color-card-foreground);
-      text-decoration: none;
-      font-size: 0.9rem;
-    }
-    .set-controls button:disabled {
-      opacity: 0.5;
-      cursor: default;
-    }
+    .set-controls .row-title { flex: 1 1 auto; }
     .playlist-section-label {
       grid-column: 1 / -1;
-      font-family: 'Sora', ui-sans-serif, system-ui, sans-serif;
-      font-weight: 700;
-      font-size: 0.95rem;
-      margin: var(--space-2) 0 calc(-1 * var(--space-1));
-      color: var(--color-muted-foreground);
+      margin: var(--space-4) 0 calc(-1 * var(--space-2));
     }
-    .set-section-row {
-      font-weight: 700;
-      border-bottom: 2px solid var(--color-border-strong);
-    }
-    .playlist-name-input {
-      flex: 1;
-      min-width: 200px;
-      min-height: var(--control-height);
-      padding: 0 var(--space-4);
-      border: 1px solid var(--color-border-strong);
-      border-radius: var(--radius-control);
-      background: var(--color-card);
-      color: var(--color-card-foreground);
-      font-size: 0.9rem;
-    }
-    .set-song-row {
-      grid-column: 1 / -1;
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: var(--space-3);
-      padding: var(--space-3) var(--space-4);
-      border: 1px solid var(--color-border);
-      border-radius: var(--radius-control);
-      background: var(--color-card);
-    }
-    .set-song-row a {
-      font-weight: 600;
-      text-decoration: none;
-      color: var(--color-card-foreground);
-    }
-    .set-song-row a:hover {
-      text-decoration: underline;
-    }
-    .row-controls {
-      margin-left: auto;
-      display: flex;
-      gap: var(--space-2);
-    }
-    .row-controls button {
-      min-width: var(--control-height-compact);
-      min-height: var(--control-height-compact);
-      border: 1px solid var(--color-border);
-      background: var(--color-card);
-      color: var(--color-card-foreground);
-      border-radius: var(--radius-sm);
-      padding: 0 var(--space-3);
-    }
-    .row-controls button:last-child {
-      color: var(--color-danger);
-      border-color: var(--color-danger-border);
-    }
-    .row-controls button:disabled {
-      opacity: 0.4;
-      cursor: default;
-    }
+    .playlist-name-input { flex: 1; min-width: 200px; width: auto; }
+    .set-song-row { grid-column: 1 / -1; }
+    .set-section-row { font-weight: 700; border-bottom: 2px solid var(--color-border-strong); }
     .result-card {
       display: block;
-      padding: var(--space-5) calc(var(--control-height-compact) + var(--space-5)) var(--space-5) var(--space-5);
-      border: 1px solid var(--color-border);
-      border-radius: var(--radius-card);
-      background: var(--color-card);
+      padding: var(--space-4) calc(var(--control-height-compact) + var(--space-6)) var(--space-4) var(--space-5);
       color: var(--color-card-foreground);
       text-decoration: none;
-      box-shadow: var(--shadow-card);
-      transition: transform 150ms ease, box-shadow 150ms ease;
+      transition: border-color 150ms ease, box-shadow 150ms ease;
     }
-    .result-card:hover {
-      transform: translateY(-2px);
-      box-shadow: var(--shadow-raised);
-    }
-    .result-card.selected {
-      outline: var(--focus-ring);
-      outline-offset: 2px;
-    }
-    .result-title {
-      font-family: 'Sora', ui-sans-serif, system-ui, sans-serif;
-      font-size: 1.1rem;
-      font-weight: 700;
-    }
-    .result-author { color: var(--color-muted-foreground); font-size: 0.9rem; }
+    .result-card:hover { border-color: var(--color-primary); box-shadow: var(--shadow-raised); }
+    .result-card.selected { outline: var(--focus-ring); outline-offset: 2px; }
+    .result-title { font-size: var(--text-lg); font-weight: 700; overflow-wrap: anywhere; }
+    .result-author { color: var(--color-muted-foreground); font-size: var(--text-sm); }
     .result-snippet {
       margin-top: var(--space-2);
-      font-size: 0.9rem;
+      font-size: var(--text-sm);
       color: var(--color-muted-foreground);
     }
     .result-snippet mark {
@@ -269,20 +168,9 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
       margin-top: var(--space-6);
       gap: var(--space-4);
     }
-    #pagination a {
-      display: inline-flex;
-      align-items: center;
-      min-height: var(--control-height);
-      padding: 0 var(--space-4);
-      border: 1px solid var(--color-border);
-      border-radius: var(--radius-control);
-      text-decoration: none;
-      background: var(--color-card);
-      color: var(--color-primary);
-    }
     #pagination .page-count {
       color: var(--color-muted-foreground);
-      font-size: 0.9rem;
+      font-size: var(--text-sm);
     }
   </style>
 
@@ -390,9 +278,10 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
 
     function buildPlaylistSongRow(song, { showUp, showDown, onUp, onDown, onRemove }) {
       const li = document.createElement('li');
-      li.className = 'set-song-row';
+      li.className = 'set-song-row row';
 
       const link = document.createElement('a');
+      link.className = 'row-title';
       link.href = `/song/${song.slug}/?from=set`;
       link.textContent = song.title;
       li.appendChild(link);
@@ -409,6 +298,7 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
 
       const upBtn = document.createElement('button');
       upBtn.type = 'button';
+      upBtn.className = 'btn btn-sm';
       upBtn.textContent = '↑';
       upBtn.disabled = !showUp;
       upBtn.addEventListener('click', onUp);
@@ -416,6 +306,7 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
 
       const downBtn = document.createElement('button');
       downBtn.type = 'button';
+      downBtn.className = 'btn btn-sm';
       downBtn.textContent = '↓';
       downBtn.disabled = !showDown;
       downBtn.addEventListener('click', onDown);
@@ -423,6 +314,7 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
 
       const removeBtn = document.createElement('button');
       removeBtn.type = 'button';
+      removeBtn.className = 'btn btn-sm btn-danger';
       removeBtn.textContent = 'Remove';
       removeBtn.addEventListener('click', onRemove);
       controls.appendChild(removeBtn);
@@ -433,7 +325,7 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
 
     function buildDraftHeadingRow(heading, index, total, songCount) {
       const li = document.createElement('div');
-      li.className = 'set-song-row set-section-row';
+      li.className = 'set-song-row set-section-row row';
 
       const title = document.createElement('span');
       title.textContent = `${heading.section} (${songCount})`;
@@ -444,6 +336,7 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
 
       const upBtn = document.createElement('button');
       upBtn.type = 'button';
+      upBtn.className = 'btn btn-sm';
       upBtn.textContent = '↑';
       upBtn.disabled = index === 0;
       upBtn.addEventListener('click', () => { updateDraft((items) => moveItem(items, index, -1)); renderPlaylistsTab(); });
@@ -451,6 +344,7 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
 
       const downBtn = document.createElement('button');
       downBtn.type = 'button';
+      downBtn.className = 'btn btn-sm';
       downBtn.textContent = '↓';
       downBtn.disabled = index === total - 1;
       downBtn.addEventListener('click', () => { updateDraft((items) => moveItem(items, index, 1)); renderPlaylistsTab(); });
@@ -458,6 +352,7 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
 
       const renameBtn = document.createElement('button');
       renameBtn.type = 'button';
+      renameBtn.className = 'btn btn-sm';
       renameBtn.textContent = 'Rename';
       renameBtn.addEventListener('click', async () => {
         const name = await askSectionName(heading.section);
@@ -469,6 +364,7 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
 
       const removeBtn = document.createElement('button');
       removeBtn.type = 'button';
+      removeBtn.className = 'btn btn-sm btn-danger';
       removeBtn.textContent = 'Remove';
       removeBtn.addEventListener('click', () => { updateDraft((items) => removeAt(items, index)); renderPlaylistsTab(); });
       controls.appendChild(removeBtn);
@@ -505,15 +401,17 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
 
     function buildPublicListRow(list) {
       const li = document.createElement('li');
-      li.className = 'set-controls';
+      li.className = 'set-controls row';
 
       const link = document.createElement('a');
+      link.className = 'row-title';
       link.href = `/set/${list.id}/`;
       link.textContent = `${list.name} (${list.count} song${list.count === 1 ? '' : 's'})`;
       li.appendChild(link);
 
       const deleteBtn = document.createElement('button');
       deleteBtn.type = 'button';
+      deleteBtn.className = 'btn btn-sm btn-danger';
       deleteBtn.textContent = 'Delete';
       deleteBtn.addEventListener('click', async () => {
         if (!(await confirmDialog(`Delete "${list.name}" for everyone? This can't be undone from the site.`, { confirmLabel: 'Delete', danger: true }))) return;
@@ -574,22 +472,23 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
       }
 
       const buildingLabel = document.createElement('li');
-      buildingLabel.className = 'playlist-section-label';
+      buildingLabel.className = 'playlist-section-label section-label';
       buildingLabel.textContent = 'Currently building';
       results.appendChild(buildingLabel);
 
       const controlsLi = document.createElement('li');
-      controlsLi.className = 'set-controls';
+      controlsLi.className = 'set-controls row';
 
       const nameInput = document.createElement('input');
       nameInput.type = 'text';
       nameInput.placeholder = 'Name this service list (e.g. Sunday Service — Sept 28)';
-      nameInput.className = 'playlist-name-input';
+      nameInput.className = 'playlist-name-input input';
       nameInput.maxLength = 100;
       nameInput.value = draftNameValue;
 
       const saveBtn = document.createElement('button');
       saveBtn.type = 'button';
+      saveBtn.className = 'btn btn-primary';
       saveBtn.textContent = 'Save';
 
       function updateSaveDisabled() {
@@ -621,6 +520,7 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
 
       const addSectionBtn = document.createElement('button');
       addSectionBtn.type = 'button';
+      addSectionBtn.className = 'btn';
       addSectionBtn.textContent = 'Add section';
       addSectionBtn.addEventListener('click', async () => {
         const name = await askSectionName();
@@ -654,7 +554,7 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
       }
 
       const libraryLabel = document.createElement('li');
-      libraryLabel.className = 'playlist-section-label';
+      libraryLabel.className = 'playlist-section-label section-label';
       libraryLabel.textContent = 'Your Service Lists';
       results.appendChild(libraryLabel);
 
@@ -666,16 +566,25 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
       } else {
         for (const playlist of cachedPlaylists) {
           const li = document.createElement('li');
-          li.className = 'set-controls';
+          li.className = 'set-controls row';
 
           const link = document.createElement('a');
+          link.className = 'row-title';
           link.href = `/set/${playlist.id}/`;
-          const playlistDate = formatListDate(publicLists.find((l) => l.id === playlist.id)?.createdAt);
-          link.textContent = playlistDate ? `${playlist.name} · ${playlistDate}` : playlist.name;
+          link.textContent = playlist.name;
           li.appendChild(link);
+
+          const playlistDate = formatListDate(publicLists.find((l) => l.id === playlist.id)?.createdAt);
+          if (playlistDate) {
+            const dateBadge = document.createElement('span');
+            dateBadge.className = 'badge';
+            dateBadge.textContent = playlistDate;
+            li.appendChild(dateBadge);
+          }
 
           const removeBtn = document.createElement('button');
           removeBtn.type = 'button';
+          removeBtn.className = 'btn btn-sm';
           removeBtn.textContent = 'Forget';
           removeBtn.addEventListener('click', () => {
             removePlaylistFromLibrary(playlist.id);
@@ -688,7 +597,7 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
       }
 
       const publicLabel = document.createElement('li');
-      publicLabel.className = 'playlist-section-label';
+      publicLabel.className = 'playlist-section-label section-label';
       publicLabel.textContent = 'All Service Lists';
       results.appendChild(publicLabel);
 
@@ -815,7 +724,7 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
       li.className = 'result-item';
       li.dataset.songId = song.id;
       const a = document.createElement('a');
-      a.className = 'result-card';
+      a.className = 'card result-card';
       a.href = from
         ? `/song/${song.slug}/?from=${from}`
         : query
@@ -848,7 +757,7 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
 
       const addBtn = document.createElement('button');
       addBtn.type = 'button';
-      addBtn.className = 'add-to-set-btn';
+      addBtn.className = 'btn btn-icon btn-sm add-to-set-btn';
       addBtn.title = 'Add to list';
       addBtn.textContent = '+';
       addBtn.addEventListener('click', (e) => {
@@ -871,6 +780,7 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
 
       if (page > 1) {
         const prev = document.createElement('a');
+        prev.className = 'btn';
         prev.href = '#';
         prev.textContent = '← Prev';
         prev.addEventListener('click', (e) => { e.preventDefault(); goToPage(page - 1); });
@@ -886,6 +796,7 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
 
       if (page < totalPages) {
         const next = document.createElement('a');
+        next.className = 'btn';
         next.href = '#';
         next.textContent = 'Next →';
         next.addEventListener('click', (e) => { e.preventDefault(); goToPage(page + 1); });
