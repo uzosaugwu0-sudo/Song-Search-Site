@@ -10,12 +10,14 @@
 
 **Spec:** `docs/superpowers/specs/2026-10-11-ui-redesign-design.md`
 
+> **Revision:** updated on resume, after the click-to-open drop-downs shipped (commit `d90e646`): service list sections and the draft's sections are `<details>` groups, and "All Service Lists" is grouped by day in `<details>` groups. Tasks 3, 4 and 6 below account for that. The code in `src/pages/index.astro` and `src/pages/set/[id].astro` is the source of truth where an anchor differs; record any difference in the ledger.
+
 ## Global Constraints
 
 - Repo root is `C:\Users\osaug\claude`; run every command from there. Windows + Git Bash. Use `PYTHONUTF8=1 python` for scripted edits (files contain non-ASCII characters). Keep shell commands short (very long commands fail with ENAMETOOLONG); write large files with the file-writing tool.
 - No React, no Tailwind, no `npx shadcn` and no new npm dependencies. Font stays Sora.
 - No behaviour, feature or copy changes. Only styling, class names, and the markup/layout changes this plan lists.
-- Existing ids and class names that JavaScript or tests rely on MUST be kept (shared classes are ADDED alongside them): `#search #tabs .tab .active #status #results #pagination .result-item .result-card .selected .add-to-set-btn .set-controls .playlist-section-label .playlist-name-input .set-song-row .set-section-row .row-controls .result-title .result-author .result-snippet`; song page `#back-link #copy-link #favorite-toggle #favorite-star #add-to-set .actions`; list page `#set-app #playlist-name #rename-input #rename-btn #copy-link #save-to-library #add-section #delete-set #status #set-songs #add-search #add-results #list-date .set-song .set-section .controls .actions .list-date`; admin `#upload-form #songs-file #words-file #upload-status #backup-btn #backup-status #backup-list .restore-btn #logout-btn #login-form #password`; header `#theme-toggle .theme-toggle .icon-sun .icon-moon .site-logo`.
+- Existing ids and class names that JavaScript or tests rely on MUST be kept (shared classes are ADDED alongside them): `#search #tabs .tab .active #status #results #pagination .result-item .result-card .selected .add-to-set-btn .set-controls .playlist-section-label .playlist-name-input .set-song-row .set-section-row .draft-group .date-group .group-songs .row-controls .result-title .result-author .result-snippet`; song page `#back-link #copy-link #favorite-toggle #favorite-star #add-to-set .actions`; list page `#set-app #playlist-name #rename-input #rename-btn #copy-link #save-to-library #add-section #delete-set #status #set-songs #add-search #add-results #list-date .set-song .set-section .set-group .set-group-songs .controls .actions .list-date`; admin `#upload-form #songs-file #words-file #upload-status #backup-btn #backup-status #backup-list .restore-btn #logout-btn #login-form #password`; header `#theme-toggle .theme-toggle .icon-sun .icon-moon .site-logo`.
 - Quality bar: WCAG 2.2 AA contrast in light and dark (enforced by the contrast test for every token pair used), visible focus rings (keep the global `:focus-visible` rule), touch targets at least `--control-height-compact` (32px) and primary buttons `--control-height` (44px), no horizontal page scroll at 360px width, honour `prefers-reduced-motion`.
 - Tests: `npm test` (baseline 123 passing). Build: `npm run build` must print `Complete!` (a Windows `UV_HANDLE_CLOSING` assertion after it is a known one-off; re-run once).
 - One commit per task so any task can be reverted alone. Commit locally; do not push or deploy as part of this plan.
@@ -30,6 +32,7 @@
 - Delete, Forget, Rename and Remove buttons keep their danger/secondary styling and remain keyboard-focusable with a visible ring.
 - A list with many badges/dates (e.g. "Sunday Service — a very long name" + "12 songs" + date) stays readable on a phone.
 - The site dialog (`.site-dialog`) still renders correctly after its CSS moves to the shared stylesheet.
+- The click-to-open groups (draft sections, list-page sections, day groups in "All Service Lists") still open and close with the keyboard (Enter/Space on the header), keep their open/closed state across redraws, and clicking Rename/Remove/arrows inside a section header does not toggle it.
 - Admin and login pages remain usable (the login password field and Log in button on one row at phone width).
 
 ---
@@ -366,6 +369,13 @@ const homeCss = `
 .add-to-set-btn { position: absolute; top: var(--space-3); right: var(--space-3); color: var(--color-primary); font-size: 1.1rem; }
 .stack { grid-column: 1 / -1; display: flex; flex-direction: column; gap: var(--space-2); }
 .stack .section-label { margin-top: var(--space-4); }
+details > summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: var(--space-2); }
+details > summary::-webkit-details-marker { display: none; }
+details > summary::before { content: '\u25B8'; color: var(--color-muted-foreground); }
+details[open] > summary::before { content: '\u25BE'; }
+details > summary > .row { flex: 1; }
+.date-group > summary { padding: var(--space-3) var(--space-4); border: 1px solid var(--color-border); border-radius: var(--radius-control); background: var(--color-card); font-weight: 600; }
+.group-songs { list-style: none; margin: var(--space-2) 0 0; padding: 0 0 0 var(--space-4); display: flex; flex-direction: column; gap: var(--space-2); }
 `;
 
 const body = `
@@ -391,13 +401,21 @@ const body = `
     <li class="stack">
       <span class="section-label">Currently building</span>
       <div class="row"><input class="input" style="flex:1;min-width:180px" placeholder="Name this service list" /><button class="btn">Add section</button><button class="btn btn-primary">Save</button></div>
-      <div class="row section-row" style="border-bottom:2px solid var(--color-border-strong)"><strong>Opening Worship</strong><span class="row-controls"><button class="btn btn-sm">Rename</button><button class="btn btn-sm btn-danger">Remove</button></span></div>
-      <div class="row"><a class="row-title" href="#">Great Is Thy Faithfulness</a><span class="row-controls"><button class="btn btn-sm">&uarr;</button><button class="btn btn-sm">&darr;</button><button class="btn btn-sm btn-danger">Remove</button></span></div>
+      <details open><summary><div class="row section-row" style="border-bottom:2px solid var(--color-border-strong)"><strong>Opening Worship (1)</strong><span class="row-controls"><button class="btn btn-sm">Rename</button><button class="btn btn-sm btn-danger">Remove</button></span></div></summary>
+        <ul class="group-songs"><li><div class="row"><a class="row-title" href="#">Great Is Thy Faithfulness</a><span class="row-controls"><button class="btn btn-sm">&uarr;</button><button class="btn btn-sm">&darr;</button><button class="btn btn-sm btn-danger">Remove</button></span></div></li></ul>
+      </details>
       <span class="section-label">Your Service Lists</span>
       <div class="row"><a class="row-title" href="#">Sunday Service</a><span class="badge">Oct 12, 2026</span><span class="row-controls"><button class="btn btn-sm">Forget</button></span></div>
       <span class="section-label">All Service Lists</span>
-      <div class="row"><a class="row-title" href="#">Sunday Service</a><span class="badge">12 songs</span><span class="badge">Oct 12, 2026</span><span class="row-controls"><button class="btn btn-sm btn-danger">Delete</button></span></div>
-      <div class="row"><a class="row-title" href="#">Youth Night — a rather long list name that must wrap nicely</a><span class="badge">5 songs</span><span class="badge">Oct 5, 2026</span><span class="row-controls"><button class="btn btn-sm btn-danger">Delete</button></span></div>
+      <details class="date-group" open><summary>Oct 12, 2026 &middot; 2 lists</summary>
+        <ul class="group-songs">
+          <li><div class="row"><a class="row-title" href="#">Sunday Service</a><span class="badge">12 songs</span><span class="row-controls"><button class="btn btn-sm btn-danger">Delete</button></span></div></li>
+          <li><div class="row"><a class="row-title" href="#">Evening Prayer — a rather long list name that must wrap nicely</a><span class="badge">5 songs</span><span class="row-controls"><button class="btn btn-sm btn-danger">Delete</button></span></div></li>
+        </ul>
+      </details>
+      <details class="date-group"><summary>Oct 5, 2026 &middot; 1 list</summary>
+        <ul class="group-songs"><li><div class="row"><a class="row-title" href="#">Youth Night</a><span class="badge">8 songs</span><span class="row-controls"><button class="btn btn-sm btn-danger">Delete</button></span></div></li></ul>
+      </details>
     </li>
   </ul>
   <ul id="results" style="margin-top:var(--space-6)">
@@ -537,6 +555,36 @@ Replace everything from `#search {` (first rule inside `<style is:global>`) to t
       font-size: 1.1rem;
       line-height: 1;
     }
+    .draft-group, .date-group { grid-column: 1 / -1; list-style: none; }
+    .draft-group > details > summary, .date-group > details > summary {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      list-style: none;
+      cursor: pointer;
+    }
+    .draft-group > details > summary > .set-section-row { flex: 1; }
+    .draft-group > details > summary::-webkit-details-marker,
+    .date-group > details > summary::-webkit-details-marker { display: none; }
+    .draft-group > details > summary::before,
+    .date-group > details > summary::before { content: '▸'; color: var(--color-muted-foreground); }
+    .draft-group > details[open] > summary::before,
+    .date-group > details[open] > summary::before { content: '▾'; }
+    .date-group > details > summary {
+      padding: var(--space-3) var(--space-4);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-control);
+      background: var(--color-card);
+      font-weight: 600;
+    }
+    .group-songs {
+      list-style: none;
+      margin: var(--space-2) 0 0;
+      padding: 0 0 0 var(--space-4);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+    }
     .set-controls {
       display: flex;
       flex-wrap: wrap;
@@ -609,9 +657,11 @@ In `src/pages/index.astro`'s `<script>`, find each builder and add the classes b
 | "Your Service Lists" rows: `li.className = 'set-controls';` | `'set-controls row'` |
 | "Your Service Lists": `link` | `link.className = 'row-title';` and render the date as a badge: replace the `link.textContent = playlistDate ? ... : playlist.name;` line with `link.textContent = playlist.name;` and, after `li.appendChild(link);`, add `if (playlistDate) { const dateBadge = document.createElement('span'); dateBadge.className = 'badge'; dateBadge.textContent = playlistDate; li.appendChild(dateBadge); }` |
 | "Your Service Lists": `removeBtn` ("Forget") | `className = 'btn btn-sm'` |
-| "All Service Lists" rows: `li.className = 'set-controls';` | `'set-controls row'` |
-| "All Service Lists": `link` | `link.className = 'row-title';`, set `link.textContent = list.name;`, and after `li.appendChild(link);` append two badges: song count (`${list.count} song${list.count === 1 ? '' : 's'}`) and, if `listDate` is non-empty, the date; each is `<span class="badge">` created with `document.createElement('span')` and set via `textContent` |
-| "All Service Lists": `deleteBtn` | `className = 'btn btn-sm btn-danger'` |
+| `buildPublicListRow` (the rows inside each day group of "All Service Lists"): `li.className = 'set-controls';` | `'set-controls row'` |
+| `buildPublicListRow`: `link` | `link.className = 'row-title';`, keep `link.textContent = ...` as it is (name and song count), and do NOT add a date badge: the day header already shows the date |
+| `buildPublicListRow`: `deleteBtn` | `className = 'btn btn-sm btn-danger'` |
+| `buildDateGroup`: the `summary` | no class needed; `.date-group > details > summary` in the CSS above styles it. Keep the `details`/`summary` structure and the `dateOpenState` logic untouched |
+| `buildDraftSection`: the `details`/`summary`/`ul.group-songs` structure | no change; keep as is |
 | pagination links (where `prev` / `next` anchors are created, `a` elements inside `#pagination`) | add `className = 'btn'` to each |
 
 Because `.set-controls .row-title { flex: 1 1 auto; }` pushes the button to the right, the delete/forget buttons need no extra wrapper.
@@ -724,8 +774,8 @@ git commit -m "feat: redesigned song page"
 - [ ] **Step 2: Script classes**
 
 In the page script:
-- `renderSetSongs` song rows: `li.className = 'set-song';` becomes `li.className = 'set-song row';`; the song `link` gets `link.className = 'row-title';`; the `controls` span becomes `controls.className = 'controls row-controls';`; every `upBtn`/`downBtn` gets `className = 'btn btn-sm'`; the Remove button `className = 'btn btn-sm btn-danger'`.
-- `buildHeadingRow`: `li.className = 'set-song set-section';` becomes `li.className = 'set-song set-section row';`; `controls.className = 'controls row-controls';`; up/down/rename buttons `'btn btn-sm'`; remove `'btn btn-sm btn-danger'`.
+- `buildSongRow(songId, index)` (song rows, now built per item and placed inside section groups): `li.className = 'set-song';` becomes `li.className = 'set-song row';`; the song `link` gets `link.className = 'row-title';`; the `controls` span becomes `controls.className = 'controls row-controls';`; every `upBtn`/`downBtn` gets `className = 'btn btn-sm'`; the Remove button `className = 'btn btn-sm btn-danger'`.
+- `buildHeadingRow(heading, index, songCount)` (a `div` inside each section's `<summary>`): `li.className = 'set-song set-section';` becomes `li.className = 'set-song set-section row';`; `controls.className = 'controls row-controls';`; up/down/rename buttons `'btn btn-sm'`; remove `'btn btn-sm btn-danger'`. `buildSection` (the `<details>` wrapper) needs no change.
 - Add-results buttons (`#add-results button` created in the `addInput` handler): `btn.className = 'btn';` after `btn.type = 'button';`.
 
 - [ ] **Step 3: Replace this page's CSS**
@@ -761,6 +811,26 @@ Replace everything inside `<style is:global>` ... `</style>` with:
     .set-song .author {
       color: var(--color-muted-foreground);
       font-size: var(--text-sm);
+    }
+    .set-group { list-style: none; }
+    .set-group > details > summary {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      list-style: none;
+      cursor: pointer;
+    }
+    .set-group > details > summary::-webkit-details-marker { display: none; }
+    .set-group > details > summary::before { content: '▸'; color: var(--color-muted-foreground); }
+    .set-group > details[open] > summary::before { content: '▾'; }
+    .set-group > details > summary > .set-section { flex: 1; }
+    .set-group-songs {
+      list-style: none;
+      margin: var(--space-2) 0 0;
+      padding: 0 0 0 var(--space-4);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
     }
     .set-section {
       background: transparent;
