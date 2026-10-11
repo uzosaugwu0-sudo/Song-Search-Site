@@ -274,6 +274,10 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
     let cachedPlaylists = [];
     let publicLists = [];
     let publicListsLoaded = false;
+    // Local changes KV's eventual consistency may not show yet (up to ~60s).
+    const justCreated = new Map();
+    const justDeleted = new Set();
+    const PUBLIC_REFRESH_MS = 30000;
     let draftNameValue = '';
 
     function getFavorites() {
@@ -435,7 +439,11 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
       saveBtn.addEventListener('click', async () => {
         saveBtn.disabled = true;
         try {
-          await saveDraftAsPlaylist(nameInput.value.trim());
+          const savedName = nameInput.value.trim();
+          const savedCount = draftSongs.length;
+          const savedId = await saveDraftAsPlaylist(savedName);
+          justCreated.set(savedId, { id: savedId, name: savedName, count: savedCount, updatedAt: new Date().toISOString() });
+          publicLists = [justCreated.get(savedId), ...publicLists];
           draftNameValue = '';
           renderPlaylistsTab();
         } catch (err) {
@@ -520,6 +528,8 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
           try {
             await deleteSetlist(list.id);
             removePlaylistFromLibrary(list.id);
+            justDeleted.add(list.id);
+            justCreated.delete(list.id);
             publicLists = publicLists.filter((l) => l.id !== list.id);
             renderPlaylistsTab();
           } catch (err) {
@@ -532,13 +542,33 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
       }
     }
 
-    // Refresh the public listing, then redraw if the tab is still showing.
-    async function loadPublicLists() {
-      try { publicLists = await listSetlists(); }
-      catch (err) { showTransientStatus(err.message); }
+    // Refresh the public listing, merging in local changes the server hasn't
+    // caught up with, and redraw only if something changed (so typing a list
+    // name isn't interrupted by a background refresh).
+    async function loadPublicLists({ quiet = false } = {}) {
+      let fetched;
+      try { fetched = await listSetlists(); }
+      catch (err) {
+        if (!quiet) showTransientStatus(err.message);
+        publicListsLoaded = true;
+        if (currentTab === 'set' && !input.value) renderPlaylistsTab();
+        return;
+      }
+      const fetchedIds = new Set(fetched.map((l) => l.id));
+      for (const id of fetchedIds) justCreated.delete(id);
+      for (const id of justDeleted) if (!fetchedIds.has(id)) justDeleted.delete(id);
+      const next = [...justCreated.values(), ...fetched.filter((l) => !justDeleted.has(l.id))];
+      const changed = !publicListsLoaded || JSON.stringify(next) !== JSON.stringify(publicLists);
+      publicLists = next;
       publicListsLoaded = true;
-      if (currentTab === 'set' && !input.value) renderPlaylistsTab();
+      if (changed && currentTab === 'set' && !input.value) renderPlaylistsTab();
     }
+
+    function refreshPublicListsIfVisible() {
+      if (currentTab === 'set' && !document.hidden) loadPublicLists({ quiet: true });
+    }
+    setInterval(refreshPublicListsIfVisible, PUBLIC_REFRESH_MS);
+    document.addEventListener('visibilitychange', refreshPublicListsIfVisible);
 
     function renderCurrentTab() {
       if (currentTab === 'favorites') renderFavoritesTab();
