@@ -31,7 +31,7 @@ const description = song
     <h1>{song.title}</h1>
     {song.author && <p class="author">{song.author}</p>}
 
-    <div class="lyrics">
+    <div class="lyrics card">
       {stanzas.map((lines) => (
         <div class="stanza">
           {lines.map((line) => (
@@ -44,19 +44,15 @@ const description = song
     </div>
 
     <div class="actions">
-      <button id="copy-link">Copy link</button>
-      <button id="favorite-toggle" aria-pressed="false">
+      <button id="copy-link" class="btn btn-primary">Copy link</button>
+      <button id="favorite-toggle" class="btn" aria-pressed="false">
         <span id="favorite-star">☆</span> Favorite
       </button>
-      <button id="add-to-set" data-song-id={song.id}>Add to List</button>
+      <button id="add-to-set" class="btn" data-song-id={song.id}>Add to List</button>
     </div>
   </div>
 
   <style>
-    .page {
-      max-width: 680px;
-      margin: 0 auto;
-    }
     .author {
       color: var(--color-muted-foreground);
       font-style: italic;
@@ -65,18 +61,16 @@ const description = song
     .lyrics {
       margin-bottom: var(--space-5);
       padding: var(--space-5) var(--space-6);
-      background: var(--color-card);
-      border: 1px solid var(--color-border);
-      border-radius: var(--radius-card);
-      box-shadow: var(--shadow-card);
+      font-size: var(--text-lg);
+      line-height: 1.7;
     }
     .stanza { margin-bottom: var(--space-5); }
     .stanza:last-child { margin-bottom: 0; }
     .stanza p { margin: 0 0 2px; }
     .label {
       font-weight: 700;
-      font-size: 0.8rem;
-      letter-spacing: 0.06em;
+      font-size: var(--text-xs);
+      letter-spacing: 0.08em;
       text-transform: uppercase;
       color: var(--color-primary);
       margin-bottom: var(--space-2) !important;
@@ -86,35 +80,14 @@ const description = song
       flex-wrap: wrap;
       gap: var(--space-3);
     }
-    #copy-link, #favorite-toggle, #add-to-set {
-      display: inline-flex;
-      align-items: center;
-      gap: var(--space-2);
-      min-height: var(--control-height);
-      padding: 0 var(--space-5);
-      border: 1px solid var(--color-border);
-      border-radius: var(--radius-control);
-      background: var(--color-card);
-      color: var(--color-card-foreground);
-      font-size: 0.95rem;
-      transition: background 150ms ease, color 150ms ease, border-color 150ms ease, opacity 150ms ease;
-    }
-    #copy-link {
-      background: var(--color-primary);
-      color: var(--color-on-primary);
-      border-color: var(--color-primary);
-      font-weight: 600;
-    }
-    #copy-link:hover { opacity: 0.85; }
     #favorite-toggle[aria-pressed="true"] {
       background: var(--color-accent);
       color: var(--color-on-accent);
       border-color: var(--color-accent);
     }
-    #add-to-set:hover {
-      background: var(--color-primary);
-      color: var(--color-on-primary);
-      border-color: var(--color-primary);
+    @media (max-width: 640px) {
+      .lyrics { padding: var(--space-4); }
+      .actions .btn { flex: 1 1 calc(50% - var(--space-3)); }
     }
   </style>
 
