@@ -124,6 +124,7 @@ const backups = backupTimestampsFromListing(listing.objects.map((o) => o.key))
   </style>
 
   <script>
+    import { confirmDialog } from '../../lib/dialogs.js';
     const uploadForm = document.getElementById('upload-form');
     const uploadStatus = document.getElementById('upload-status');
 
@@ -177,7 +178,7 @@ const backups = backupTimestampsFromListing(listing.objects.map((o) => o.key))
     document.querySelectorAll('.restore-btn').forEach((btn) => {
       btn.addEventListener('click', async () => {
         const timestamp = btn.dataset.timestamp;
-        if (!window.confirm(`Replace the live database with the backup from ${timestamp}?`)) return;
+        if (!(await confirmDialog(`Replace the live database with the backup from ${timestamp}?`, { confirmLabel: 'Replace', danger: true }))) return;
         uploadStatus.textContent = 'Restoring…';
         try {
           const res = await fetch('/api/admin/restore', {
