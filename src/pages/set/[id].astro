@@ -19,7 +19,7 @@ if (liveSet) {
   initialName = liveSet.name || 'Untitled Set';
 }
 
-const songsJson = JSON.stringify(songs.map(({ id, slug, title, author }) => ({ id, slug, title, author })))
+const songsJson = JSON.stringify(songs.map(({ id, slug, title, author, lyrics }) => ({ id, slug, title, author, lyrics })))
   .replace(/</g, '\\u003c');
 const setInitJson = JSON.stringify({ setId: id, initialSongIds, initialName })
   .replace(/</g, '\\u003c');
@@ -422,7 +422,7 @@ const setInitJson = JSON.stringify({ setId: id, initialSongIds, initialName })
         addResults.replaceChildren();
         if (!q) return;
         const matches = data
-          .filter((song) => !currentIds.includes(song.id) && song.title.toLowerCase().includes(q))
+          .filter((song) => !currentIds.includes(song.id) && (song.title.toLowerCase().includes(q) || song.lyrics.toLowerCase().includes(q)))
           .slice(0, 8);
         for (const song of matches) {
           const li = document.createElement('li');
