@@ -118,6 +118,53 @@ const { title, description = 'Search a song database by title or lyrics.' } = As
       :root:not([data-theme="light"]) .theme-toggle .icon-moon { display: none; }
       :root:not([data-theme="light"]) .theme-toggle .icon-sun { display: block; }
     }
+    .site-dialog {
+      width: min(92vw, 420px);
+      padding: var(--space-5);
+      border: 1px solid var(--color-border-strong);
+      border-radius: var(--radius-control);
+      background: var(--color-card);
+      color: var(--color-card-foreground);
+    }
+    .site-dialog::backdrop { background: rgba(0, 0, 0, 0.45); }
+    .site-dialog p { margin: 0 0 var(--space-4); }
+    .site-dialog input {
+      width: 100%;
+      box-sizing: border-box;
+      min-height: var(--control-height);
+      padding: 0 var(--space-4);
+      margin-bottom: var(--space-4);
+      font-size: 1rem;
+      border: 1px solid var(--color-border-strong);
+      border-radius: var(--radius-control);
+      background: var(--color-card);
+      color: var(--color-card-foreground);
+    }
+    .site-dialog-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: var(--space-3);
+    }
+    .site-dialog-actions button {
+      min-height: var(--control-height);
+      padding: 0 var(--space-5);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-control);
+      background: var(--color-card);
+      color: var(--color-card-foreground);
+      font-size: 0.95rem;
+    }
+    .site-dialog-actions button.primary {
+      background: var(--color-primary);
+      border-color: var(--color-primary);
+      color: var(--color-on-primary);
+      font-weight: 600;
+    }
+    .site-dialog-actions button.danger {
+      color: var(--color-danger);
+      border-color: var(--color-danger-border);
+      font-weight: 600;
+    }
   </style>
   <style>
     * { box-sizing: border-box; }

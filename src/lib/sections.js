@@ -33,9 +33,8 @@ export function moveItem(items, index, direction) {
   return next;
 }
 
-// Browser only. Returns a trimmed, length-capped name, or null if cancelled/empty.
-export function askSectionName(current = '') {
-  const answer = window.prompt('Section name (e.g. Opening Worship, Praise, Closing Worship)', current);
+// Trims and length-caps a typed section name; null if cancelled (null) or empty.
+export function cleanSectionName(answer) {
   const name = answer === null ? '' : answer.trim().slice(0, MAX_SECTION_NAME_LENGTH);
   return name || null;
 }

@@ -258,7 +258,8 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
   <script type="application/json" id="songs-data" set:html={songsJson} />
   <script>
     import { normalizeTitle } from '../lib/normalize.js';
-    import { isHeading, addHeading, renameHeading, removeAt, moveItem, askSectionName } from '../lib/sections.js';
+    import { isHeading, addHeading, renameHeading, removeAt, moveItem } from '../lib/sections.js';
+    import { askSectionName, confirmDialog } from '../lib/dialogs.js';
     import { formatListDate } from '../lib/setlist.js';
     import { addToDraft, removeFromDraft, reorderInDraft, getDraftIds, getPlaylists, removePlaylistFromLibrary, saveDraftAsPlaylist, listSetlists, deleteSetlist, updateDraft } from '../lib/setlist-client.js';
 
@@ -423,8 +424,8 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
       const renameBtn = document.createElement('button');
       renameBtn.type = 'button';
       renameBtn.textContent = 'Rename';
-      renameBtn.addEventListener('click', () => {
-        const name = askSectionName(heading.section);
+      renameBtn.addEventListener('click', async () => {
+        const name = await askSectionName(heading.section);
         if (!name) return;
         updateDraft((items) => renameHeading(items, index, name));
         renderPlaylistsTab();
@@ -508,8 +509,8 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
       const addSectionBtn = document.createElement('button');
       addSectionBtn.type = 'button';
       addSectionBtn.textContent = 'Add section';
-      addSectionBtn.addEventListener('click', () => {
-        const name = askSectionName();
+      addSectionBtn.addEventListener('click', async () => {
+        const name = await askSectionName();
         if (!name) return;
         updateDraft((items) => addHeading(items, name));
         renderPlaylistsTab();
@@ -596,7 +597,7 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
         deleteBtn.type = 'button';
         deleteBtn.textContent = 'Delete';
         deleteBtn.addEventListener('click', async () => {
-          if (!confirm(`Delete "${list.name}" for everyone? This can't be undone from the site.`)) return;
+          if (!(await confirmDialog(`Delete "${list.name}" for everyone? This can't be undone from the site.`, { confirmLabel: 'Delete', danger: true }))) return;
           try {
             await deleteSetlist(list.id);
             removePlaylistFromLibrary(list.id);

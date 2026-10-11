@@ -195,7 +195,8 @@ const setInitJson = JSON.stringify({ setId: id, initialSongIds, initialName })
   <script type="application/json" id="set-init-data" set:html={setInitJson} />
   <script>
     import { updateSetlist, deleteSetlist, isInLibrary, addPlaylistToLibrary, removePlaylistFromLibrary, updatePlaylistNameInLibrary } from '../../lib/setlist-client.js';
-    import { isHeading, countSongs, addHeading, renameHeading, askSectionName } from '../../lib/sections.js';
+    import { isHeading, countSongs, addHeading, renameHeading } from '../../lib/sections.js';
+    import { askSectionName, confirmDialog } from '../../lib/dialogs.js';
     import { formatListDate } from '../../lib/setlist.js';
 
     const setSongsList = document.getElementById('set-songs');
@@ -298,8 +299,8 @@ const setInitJson = JSON.stringify({ setId: id, initialSongIds, initialName })
         const renameBtn = document.createElement('button');
         renameBtn.type = 'button';
         renameBtn.textContent = 'Rename';
-        renameBtn.addEventListener('click', () => {
-          const name = askSectionName(heading.section);
+        renameBtn.addEventListener('click', async () => {
+          const name = await askSectionName(heading.section);
           if (name) persist(renameHeading(currentIds, index, name));
         });
         controls.appendChild(renameBtn);
@@ -343,8 +344,8 @@ const setInitJson = JSON.stringify({ setId: id, initialSongIds, initialName })
 
       renderSetSongs();
 
-      document.getElementById('add-section').addEventListener('click', () => {
-        const name = askSectionName();
+      document.getElementById('add-section').addEventListener('click', async () => {
+        const name = await askSectionName();
         if (name) persist(addHeading(currentIds, name));
       });
 
@@ -404,7 +405,7 @@ const setInitJson = JSON.stringify({ setId: id, initialSongIds, initialName })
       });
 
       document.getElementById('delete-set').addEventListener('click', async () => {
-        if (!confirm(`Delete "${currentName}" for everyone? This can't be undone from the site.`)) return;
+        if (!(await confirmDialog(`Delete "${currentName}" for everyone? This can't be undone from the site.`, { confirmLabel: 'Delete', danger: true }))) return;
         try {
           await deleteSetlist(setId);
           removePlaylistFromLibrary(setId);

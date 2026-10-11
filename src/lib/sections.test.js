@@ -59,3 +59,12 @@ test('moveItem returns an unchanged copy when the move is out of range', () => {
   assert.deepEqual(moveItem(items, 0, -1), ['a', 'b']);
   assert.deepEqual(moveItem(items, 1, 1), ['a', 'b']);
 });
+
+import { cleanSectionName } from './sections.js';
+
+test('cleanSectionName trims, caps at 60 characters, and returns null for empty or cancelled input', () => {
+  assert.equal(cleanSectionName('  Praise  '), 'Praise');
+  assert.equal(cleanSectionName('x'.repeat(70)), 'x'.repeat(60));
+  assert.equal(cleanSectionName('   '), null);
+  assert.equal(cleanSectionName(null), null);
+});
