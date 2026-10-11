@@ -26,7 +26,7 @@ const setInitJson = JSON.stringify({ setId: id, initialSongIds, initialName })
 ---
 <Layout title={liveSet === null ? 'Set List — Song Search' : `${initialName} — Song Search`} description="A shared, editable list of songs.">
   <div class="page">
-    <p><a href="/">← Back to search</a></p>
+    <p><a href="/?tab=set">← Back to Service Lists</a></p>
 
     {liveSet === null ? (
       <div>

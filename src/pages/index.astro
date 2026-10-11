@@ -881,8 +881,11 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
     const initialQuery = params.get('q') || '';
     const initialPage = Math.max(1, parseInt(params.get('page'), 10) || 1);
     input.value = initialQuery;
+    const initialTab = params.get('tab');
     if (initialQuery) {
       renderSearch(initialQuery, { updateUrl: false });
+    } else if (initialTab === 'set') {
+      switchTab('set');
     } else {
       renderBrowse(initialPage, { updateUrl: false });
     }
