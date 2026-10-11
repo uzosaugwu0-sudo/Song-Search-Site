@@ -108,6 +108,37 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
       color: var(--color-on-primary);
       border-color: var(--color-primary);
     }
+    .draft-group, .date-group { grid-column: 1 / -1; list-style: none; }
+    .draft-group > details > summary, .date-group > details > summary {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      list-style: none;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .draft-group > details > summary { font-weight: inherit; }
+    .draft-group > details > summary > .set-section-row { flex: 1; }
+    .draft-group > details > summary::-webkit-details-marker,
+    .date-group > details > summary::-webkit-details-marker { display: none; }
+    .draft-group > details > summary::before,
+    .date-group > details > summary::before { content: '▸'; color: var(--color-muted-foreground); }
+    .draft-group > details[open] > summary::before,
+    .date-group > details[open] > summary::before { content: '▾'; }
+    .date-group > details > summary {
+      padding: var(--space-3) var(--space-4);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-control);
+      background: var(--color-card);
+    }
+    .group-songs {
+      list-style: none;
+      margin: var(--space-2) 0 0;
+      padding: 0 0 0 var(--space-4);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+    }
     .set-controls {
       display: flex;
       gap: var(--space-3);
@@ -258,9 +289,9 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
   <script type="application/json" id="songs-data" set:html={songsJson} />
   <script>
     import { normalizeTitle } from '../lib/normalize.js';
-    import { isHeading, addHeading, renameHeading, removeAt, moveItem } from '../lib/sections.js';
+    import { isHeading, addHeading, renameHeading, removeAt, moveItem, groupBySection } from '../lib/sections.js';
     import { askSectionName, confirmDialog } from '../lib/dialogs.js';
-    import { formatListDate } from '../lib/setlist.js';
+    import { formatListDate, groupListsByDay } from '../lib/setlist.js';
     import { addToDraft, removeFromDraft, reorderInDraft, getDraftIds, getPlaylists, removePlaylistFromLibrary, saveDraftAsPlaylist, listSetlists, deleteSetlist, updateDraft } from '../lib/setlist-client.js';
 
     const data = JSON.parse(document.getElementById('songs-data').textContent);
@@ -281,6 +312,10 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
     let cachedPlaylists = [];
     let publicLists = [];
     let publicListsLoaded = false;
+    // Open/closed state of drop-downs, kept across re-renders.
+    // ponytail: draft sections are remembered by name, so duplicate names share a state.
+    const closedDraftSections = new Set();
+    const dateOpenState = new Map();
     // Local changes KV's eventual consistency may not show yet (up to ~60s).
     const justCreated = new Map();
     const justDeleted = new Set();
@@ -396,12 +431,12 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
       return li;
     }
 
-    function buildDraftHeadingRow(heading, index, total) {
-      const li = document.createElement('li');
+    function buildDraftHeadingRow(heading, index, total, songCount) {
+      const li = document.createElement('div');
       li.className = 'set-song-row set-section-row';
 
       const title = document.createElement('span');
-      title.textContent = heading.section;
+      title.textContent = `${heading.section} (${songCount})`;
       li.appendChild(title);
 
       const controls = document.createElement('span');
@@ -439,6 +474,84 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
       controls.appendChild(removeBtn);
 
       li.appendChild(controls);
+      return li;
+    }
+
+    // A draft section header (click to open/close) with its songs underneath.
+    function buildDraftSection(group, rows, total) {
+      const name = group.heading.section;
+      const li = document.createElement('li');
+      li.className = 'draft-group';
+
+      const details = document.createElement('details');
+      details.open = !closedDraftSections.has(name);
+      details.addEventListener('toggle', () => {
+        if (details.open) closedDraftSections.delete(name);
+        else closedDraftSections.add(name);
+      });
+
+      const summary = document.createElement('summary');
+      summary.appendChild(buildDraftHeadingRow(group.heading, group.headingIndex, total, rows.length));
+      details.appendChild(summary);
+
+      const songs = document.createElement('ul');
+      songs.className = 'group-songs';
+      rows.forEach((row) => songs.appendChild(row));
+      details.appendChild(songs);
+
+      li.appendChild(details);
+      return li;
+    }
+
+    function buildPublicListRow(list) {
+      const li = document.createElement('li');
+      li.className = 'set-controls';
+
+      const link = document.createElement('a');
+      link.href = `/set/${list.id}/`;
+      link.textContent = `${list.name} (${list.count} song${list.count === 1 ? '' : 's'})`;
+      li.appendChild(link);
+
+      const deleteBtn = document.createElement('button');
+      deleteBtn.type = 'button';
+      deleteBtn.textContent = 'Delete';
+      deleteBtn.addEventListener('click', async () => {
+        if (!(await confirmDialog(`Delete "${list.name}" for everyone? This can't be undone from the site.`, { confirmLabel: 'Delete', danger: true }))) return;
+        try {
+          await deleteSetlist(list.id);
+          removePlaylistFromLibrary(list.id);
+          justDeleted.add(list.id);
+          justCreated.delete(list.id);
+          publicLists = publicLists.filter((l) => l.id !== list.id);
+          renderPlaylistsTab();
+        } catch (err) {
+          showTransientStatus(err.message);
+        }
+      });
+      li.appendChild(deleteBtn);
+      return li;
+    }
+
+    // One click-to-open header per day, so lists made on the same day stay together.
+    // Today starts open; other days start closed until the viewer opens them.
+    function buildDateGroup(group) {
+      const li = document.createElement('li');
+      li.className = 'date-group';
+
+      const details = document.createElement('details');
+      details.open = dateOpenState.has(group.key) ? dateOpenState.get(group.key) : group.isToday;
+      details.addEventListener('toggle', () => dateOpenState.set(group.key, details.open));
+
+      const summary = document.createElement('summary');
+      summary.textContent = `${group.label} · ${group.lists.length} list${group.lists.length === 1 ? '' : 's'}`;
+      details.appendChild(summary);
+
+      const lists = document.createElement('ul');
+      lists.className = 'group-songs';
+      group.lists.forEach((list) => lists.appendChild(buildPublicListRow(list)));
+      details.appendChild(lists);
+
+      li.appendChild(details);
       return li;
     }
 
@@ -521,22 +634,24 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
       controlsLi.appendChild(saveBtn);
       results.appendChild(controlsLi);
 
-      draftIds.forEach((item, index) => {
-        if (isHeading(item)) {
-          results.appendChild(buildDraftHeadingRow(item, index, draftIds.length));
-          return;
+      for (const group of groupBySection(draftIds)) {
+        const rows = group.entries.map(({ item, index }) => {
+          const song = songById.get(item);
+          if (!song) return null;
+          return buildPlaylistSongRow(song, {
+            showUp: index > 0,
+            showDown: index < draftIds.length - 1,
+            onUp: () => { reorderInDraft(song.id, -1); renderPlaylistsTab(); },
+            onDown: () => { reorderInDraft(song.id, 1); renderPlaylistsTab(); },
+            onRemove: () => { removeFromDraft(song.id); renderPlaylistsTab(); },
+          });
+        }).filter(Boolean);
+        if (!group.heading) {
+          rows.forEach((row) => results.appendChild(row));
+        } else {
+          results.appendChild(buildDraftSection(group, rows, draftIds.length));
         }
-        const song = songById.get(item);
-        if (!song) return;
-        const li = buildPlaylistSongRow(song, {
-          showUp: index > 0,
-          showDown: index < draftIds.length - 1,
-          onUp: () => { reorderInDraft(song.id, -1); renderPlaylistsTab(); },
-          onDown: () => { reorderInDraft(song.id, 1); renderPlaylistsTab(); },
-          onRemove: () => { removeFromDraft(song.id); renderPlaylistsTab(); },
-        });
-        results.appendChild(li);
-      });
+      }
 
       const libraryLabel = document.createElement('li');
       libraryLabel.className = 'playlist-section-label';
@@ -583,35 +698,8 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
         emptyLi.textContent = publicListsLoaded ? 'No service lists have been saved yet.' : 'Loading…';
         results.appendChild(emptyLi);
       }
-      for (const list of publicLists) {
-        const li = document.createElement('li');
-        li.className = 'set-controls';
-
-        const link = document.createElement('a');
-        link.href = `/set/${list.id}/`;
-        const listDate = formatListDate(list.createdAt);
-        link.textContent = `${list.name} (${list.count} song${list.count === 1 ? '' : 's'})${listDate ? ` · ${listDate}` : ''}`;
-        li.appendChild(link);
-
-        const deleteBtn = document.createElement('button');
-        deleteBtn.type = 'button';
-        deleteBtn.textContent = 'Delete';
-        deleteBtn.addEventListener('click', async () => {
-          if (!(await confirmDialog(`Delete "${list.name}" for everyone? This can't be undone from the site.`, { confirmLabel: 'Delete', danger: true }))) return;
-          try {
-            await deleteSetlist(list.id);
-            removePlaylistFromLibrary(list.id);
-            justDeleted.add(list.id);
-            justCreated.delete(list.id);
-            publicLists = publicLists.filter((l) => l.id !== list.id);
-            renderPlaylistsTab();
-          } catch (err) {
-            showTransientStatus(err.message);
-          }
-        });
-        li.appendChild(deleteBtn);
-
-        results.appendChild(li);
+      for (const group of groupListsByDay(publicLists)) {
+        results.appendChild(buildDateGroup(group));
       }
     }
 
@@ -767,6 +855,9 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
         e.preventDefault();
         e.stopPropagation();
         addToDraft(song.id);
+        // The song lands in the last section; make sure it is open so the song is visible.
+        const lastDraftHeading = [...getDraftIds()].reverse().find(isHeading);
+        if (lastDraftHeading) closedDraftSections.delete(lastDraftHeading.section);
         showTransientStatus(`Added "${song.title}" to your draft`);
         if (currentTab === 'set') renderPlaylistsTab();
       });

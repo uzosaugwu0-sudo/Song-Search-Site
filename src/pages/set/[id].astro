@@ -136,6 +136,29 @@ const setInitJson = JSON.stringify({ setId: id, initialSongIds, initialName })
       color: var(--color-muted-foreground);
       margin: calc(var(--space-2) * -1) 0 var(--space-4);
     }
+    .set-group { list-style: none; }
+    .set-group > details > summary {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      list-style: none;
+      cursor: pointer;
+    }
+    .set-group > details > summary::-webkit-details-marker { display: none; }
+    .set-group > details > summary::before {
+      content: '▸';
+      color: var(--color-muted-foreground);
+    }
+    .set-group > details[open] > summary::before { content: '▾'; }
+    .set-group > details > summary > .set-section { flex: 1; }
+    .set-group-songs {
+      list-style: none;
+      margin: var(--space-2) 0 0;
+      padding: 0 0 0 var(--space-4);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+    }
     .set-section {
       background: transparent;
       border-color: var(--color-border-strong);
@@ -195,7 +218,7 @@ const setInitJson = JSON.stringify({ setId: id, initialSongIds, initialName })
   <script type="application/json" id="set-init-data" set:html={setInitJson} />
   <script>
     import { updateSetlist, deleteSetlist, isInLibrary, addPlaylistToLibrary, removePlaylistFromLibrary, updatePlaylistNameInLibrary } from '../../lib/setlist-client.js';
-    import { isHeading, countSongs, addHeading, renameHeading } from '../../lib/sections.js';
+    import { isHeading, countSongs, addHeading, renameHeading, groupBySection } from '../../lib/sections.js';
     import { askSectionName, confirmDialog } from '../../lib/dialogs.js';
     import { formatListDate } from '../../lib/setlist.js';
 
@@ -211,6 +234,8 @@ const setInitJson = JSON.stringify({ setId: id, initialSongIds, initialName })
       const dateEl = document.getElementById('list-date');
       dateEl.textContent = formatListDate(dateEl.dateTime);
 
+      const closedSections = new Set();
+
       function renderSetSongs() {
         setSongsList.replaceChildren();
         const songCount = countSongs(currentIds);
@@ -220,63 +245,95 @@ const setInitJson = JSON.stringify({ setId: id, initialSongIds, initialName })
           statusEl.textContent = `${songCount} song${songCount === 1 ? '' : 's'} in this set`;
         }
 
-        currentIds.forEach((item, index) => {
-          if (isHeading(item)) {
-            setSongsList.appendChild(buildHeadingRow(item, index));
-            return;
+        for (const group of groupBySection(currentIds)) {
+          const rows = group.entries.map(({ item, index }) => buildSongRow(item, index)).filter(Boolean);
+          if (!group.heading) {
+            rows.forEach((row) => setSongsList.appendChild(row));
+          } else {
+            setSongsList.appendChild(buildSection(group, rows));
           }
-          const song = songById.get(item);
-          if (!song) return;
-
-          const li = document.createElement('li');
-          li.className = 'set-song';
-
-          const link = document.createElement('a');
-          link.href = `/song/${song.slug}/?set=${encodeURIComponent(setId)}`;
-          link.textContent = song.title;
-          li.appendChild(link);
-
-          if (song.author) {
-            const author = document.createElement('span');
-            author.className = 'author';
-            author.textContent = song.author;
-            li.appendChild(author);
-          }
-
-          const controls = document.createElement('span');
-          controls.className = 'controls';
-
-          const upBtn = document.createElement('button');
-          upBtn.type = 'button';
-          upBtn.textContent = '↑';
-          upBtn.disabled = index === 0;
-          upBtn.addEventListener('click', () => reorder(index, -1));
-          controls.appendChild(upBtn);
-
-          const downBtn = document.createElement('button');
-          downBtn.type = 'button';
-          downBtn.textContent = '↓';
-          downBtn.disabled = index === currentIds.length - 1;
-          downBtn.addEventListener('click', () => reorder(index, 1));
-          controls.appendChild(downBtn);
-
-          const removeBtn = document.createElement('button');
-          removeBtn.type = 'button';
-          removeBtn.textContent = 'Remove';
-          removeBtn.addEventListener('click', () => removeAt(index));
-          controls.appendChild(removeBtn);
-
-          li.appendChild(controls);
-          setSongsList.appendChild(li);
-        });
+        }
       }
 
-      function buildHeadingRow(heading, index) {
+      function buildSongRow(songId, index) {
+        const song = songById.get(songId);
+        if (!song) return null;
+
         const li = document.createElement('li');
+        li.className = 'set-song';
+
+        const link = document.createElement('a');
+        link.href = `/song/${song.slug}/?set=${encodeURIComponent(setId)}`;
+        link.textContent = song.title;
+        li.appendChild(link);
+
+        if (song.author) {
+          const author = document.createElement('span');
+          author.className = 'author';
+          author.textContent = song.author;
+          li.appendChild(author);
+        }
+
+        const controls = document.createElement('span');
+        controls.className = 'controls';
+
+        const upBtn = document.createElement('button');
+        upBtn.type = 'button';
+        upBtn.textContent = '↑';
+        upBtn.disabled = index === 0;
+        upBtn.addEventListener('click', () => reorder(index, -1));
+        controls.appendChild(upBtn);
+
+        const downBtn = document.createElement('button');
+        downBtn.type = 'button';
+        downBtn.textContent = '↓';
+        downBtn.disabled = index === currentIds.length - 1;
+        downBtn.addEventListener('click', () => reorder(index, 1));
+        controls.appendChild(downBtn);
+
+        const removeBtn = document.createElement('button');
+        removeBtn.type = 'button';
+        removeBtn.textContent = 'Remove';
+        removeBtn.addEventListener('click', () => removeAt(index));
+        controls.appendChild(removeBtn);
+
+        li.appendChild(controls);
+        return li;
+      }
+
+      // A section header (click to open/close) with its songs underneath.
+      // ponytail: closed state is remembered by section name, so duplicate names share it.
+      function buildSection(group, rows) {
+        const name = group.heading.section;
+        const li = document.createElement('li');
+        li.className = 'set-group';
+
+        const details = document.createElement('details');
+        details.open = !closedSections.has(name);
+        details.addEventListener('toggle', () => {
+          if (details.open) closedSections.delete(name);
+          else closedSections.add(name);
+        });
+
+        const summary = document.createElement('summary');
+        summary.appendChild(buildHeadingRow(group.heading, group.headingIndex, rows.length));
+        details.appendChild(summary);
+
+        const songs = document.createElement('ul');
+        songs.className = 'set-group-songs';
+        rows.forEach((row) => songs.appendChild(row));
+        details.appendChild(songs);
+
+        li.appendChild(details);
+        return li;
+      }
+
+      function buildHeadingRow(heading, index, songCount) {
+        const li = document.createElement('div');
         li.className = 'set-song set-section';
 
         const title = document.createElement('span');
-        title.textContent = heading.section;
+        title.textContent = `${heading.section} (${songCount})`;
         li.appendChild(title);
 
         const controls = document.createElement('span');
@@ -339,6 +396,9 @@ const setInitJson = JSON.stringify({ setId: id, initialSongIds, initialName })
 
       function addSong(songId) {
         if (currentIds.includes(songId)) return;
+        // New songs land in the last section; make sure it is open so the song is visible.
+        const lastHeading = [...currentIds].reverse().find(isHeading);
+        if (lastHeading) closedSections.delete(lastHeading.section);
         persist([...currentIds, songId]);
       }
 

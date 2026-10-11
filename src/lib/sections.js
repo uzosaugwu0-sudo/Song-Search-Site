@@ -33,6 +33,18 @@ export function moveItem(items, index, direction) {
   return next;
 }
 
+// Splits a list into display groups: songs before the first heading (heading: null),
+// then one group per heading. Entries keep their index in the original array so
+// index-based controls (move, remove, rename) keep working.
+export function groupBySection(items) {
+  const groups = [{ heading: null, headingIndex: -1, entries: [] }];
+  items.forEach((item, index) => {
+    if (isHeading(item)) groups.push({ heading: item, headingIndex: index, entries: [] });
+    else groups[groups.length - 1].entries.push({ item, index });
+  });
+  return groups;
+}
+
 // Trims and length-caps a typed section name; null if cancelled (null) or empty.
 export function cleanSectionName(answer) {
   const name = answer === null ? '' : answer.trim().slice(0, MAX_SECTION_NAME_LENGTH);

@@ -268,3 +268,32 @@ test('needsBackfill is true only for lists with no metadata at all', () => {
   assert.equal(needsBackfill({ name: 'a', metadata: { name: 'A', count: 1, updatedAt: '2026-01-01T00:00:00.000Z' } }), false);
   assert.equal(needsBackfill({ name: 'a', metadata: { deleted: true } }), false);
 });
+
+import { groupListsByDay } from './setlist.js';
+
+// Dates are built from local components so the tests do not depend on the machine's timezone.
+const at = (y, m, d, h, min = 0) => new Date(y, m - 1, d, h, min).toISOString();
+
+test('groupListsByDay groups by local calendar day, newest day first, newest list first within a day', () => {
+  const lists = [
+    { id: 'a', createdAt: at(2026, 10, 12, 9) },
+    { id: 'b', createdAt: at(2026, 10, 5, 20) },
+    { id: 'c', createdAt: at(2026, 10, 12, 23, 30) },
+  ];
+  const groups = groupListsByDay(lists, new Date(2026, 9, 20));
+  assert.deepEqual(groups.map((g) => g.key), ['2026-10-12', '2026-10-05']);
+  assert.deepEqual(groups[0].lists.map((l) => l.id), ['c', 'a']);
+  assert.deepEqual(groups[1].lists.map((l) => l.id), ['b']);
+});
+
+test('groupListsByDay marks only today as today and labels each day', () => {
+  const lists = [{ id: 'a', createdAt: at(2026, 10, 20, 8) }, { id: 'b', createdAt: at(2026, 10, 19, 8) }];
+  const groups = groupListsByDay(lists, new Date(2026, 9, 20, 15));
+  assert.deepEqual(groups.map((g) => g.isToday), [true, false]);
+  assert.equal(groups[0].label, 'Oct 20, 2026');
+});
+
+test('groupListsByDay handles no lists and skips entries without a usable date', () => {
+  assert.deepEqual(groupListsByDay([], new Date()), []);
+  assert.deepEqual(groupListsByDay([{ id: 'x', createdAt: 'nope' }], new Date()), []);
+});

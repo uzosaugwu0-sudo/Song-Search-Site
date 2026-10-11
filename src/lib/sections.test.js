@@ -68,3 +68,18 @@ test('cleanSectionName trims, caps at 60 characters, and returns null for empty 
   assert.equal(cleanSectionName('   '), null);
   assert.equal(cleanSectionName(null), null);
 });
+
+import { groupBySection } from './sections.js';
+
+test('groupBySection keeps unheaded songs first, then one group per heading with original indexes', () => {
+  const items = ['a', { section: 'Praise' }, 'b', 'c', { section: 'Closing' }];
+  assert.deepEqual(groupBySection(items), [
+    { heading: null, headingIndex: -1, entries: [{ item: 'a', index: 0 }] },
+    { heading: { section: 'Praise' }, headingIndex: 1, entries: [{ item: 'b', index: 2 }, { item: 'c', index: 3 }] },
+    { heading: { section: 'Closing' }, headingIndex: 4, entries: [] },
+  ]);
+});
+
+test('groupBySection of an empty list is one empty unheaded group', () => {
+  assert.deepEqual(groupBySection([]), [{ heading: null, headingIndex: -1, entries: [] }]);
+});

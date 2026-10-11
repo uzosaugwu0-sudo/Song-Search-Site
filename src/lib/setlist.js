@@ -83,6 +83,28 @@ export function formatListDate(iso) {
   return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
+function localDayKey(date) {
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
+// Groups list entries by the local calendar day they were created: newest day first,
+// newest list first within a day. Entries without a usable createdAt are skipped.
+export function groupListsByDay(entries, now = new Date()) {
+  const todayKey = localDayKey(now);
+  const groups = new Map();
+  for (const entry of entries) {
+    const date = new Date(entry.createdAt);
+    if (Number.isNaN(date.getTime())) continue;
+    const key = localDayKey(date);
+    if (!groups.has(key)) groups.set(key, { key, label: formatListDate(entry.createdAt), isToday: key === todayKey, lists: [] });
+    groups.get(key).lists.push(entry);
+  }
+  return [...groups.values()]
+    .sort((a, b) => b.key.localeCompare(a.key))
+    .map((group) => ({ ...group, lists: group.lists.sort((a, b) => b.createdAt.localeCompare(a.createdAt)) }));
+}
+
 export function prepareSetlistName(requestedName) {
   const name = typeof requestedName === 'string' ? requestedName.trim() : '';
   if (name.length === 0) {
