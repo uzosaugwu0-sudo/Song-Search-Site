@@ -1,4 +1,4 @@
-import { prepareSongIdsForUpdate, prepareSetlistName, buildSetlistValue, jsonResponse } from '../../../lib/setlist.js';
+import { prepareSongIdsForUpdate, prepareSetlistName, putSetlist, parseLiveSetlist, markDeleted, SOFT_DELETE_TTL_SECONDS, jsonResponse } from '../../../lib/setlist.js';
 import { loadSongs } from '../../../lib/songs-data.js';
 
 export const prerender = false;
@@ -6,7 +6,7 @@ export const prerender = false;
 export async function GET({ params, locals }) {
   const kv = locals.runtime.env.SETLISTS;
   const raw = await kv.get(params.id);
-  if (raw === null) {
+  if (parseLiveSetlist(raw) === null) {
     return jsonResponse({ error: 'Not found' }, 404);
   }
   return new Response(raw, {
@@ -18,7 +18,7 @@ export async function GET({ params, locals }) {
 export async function PUT({ params, request, locals }) {
   const kv = locals.runtime.env.SETLISTS;
   const existing = await kv.get(params.id);
-  if (existing === null) {
+  if (parseLiveSetlist(existing) === null) {
     return jsonResponse({ error: 'Not found' }, 404);
   }
 
@@ -46,10 +46,23 @@ export async function PUT({ params, request, locals }) {
     name = JSON.parse(existing).name;
   }
 
-  const value = buildSetlistValue(songResult.songIds, name);
-  await kv.put(params.id, value);
+  const value = await putSetlist(kv, params.id, songResult.songIds, name);
   return new Response(value, {
     status: 200,
     headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
   });
+}
+
+// Soft delete: flag the list and let KV expire it after the recovery window.
+export async function DELETE({ params, locals }) {
+  const kv = locals.runtime.env.SETLISTS;
+  const raw = await kv.get(params.id);
+  if (parseLiveSetlist(raw) === null) {
+    return jsonResponse({ error: 'Not found' }, 404);
+  }
+  await kv.put(params.id, markDeleted(raw), {
+    metadata: { deleted: true },
+    expirationTtl: SOFT_DELETE_TTL_SECONDS,
+  });
+  return jsonResponse({ ok: true });
 }

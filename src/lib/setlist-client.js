@@ -34,6 +34,17 @@ export function createSetlist(songIds, name) {
   return sendJson('/api/setlists', 'POST', { songIds, name }, 'Failed to create set list');
 }
 
+export async function listSetlists() {
+  const response = await fetch('/api/setlists');
+  if (!response.ok) throw new Error('Could not load the public service lists');
+  return response.json();
+}
+
+export async function deleteSetlist(id) {
+  const response = await fetch(`/api/setlists/${id}`, { method: 'DELETE' });
+  if (!response.ok) throw new Error('Could not delete this service list');
+}
+
 // --- Draft helpers: the playlist currently being built. Always local-only
 // (localStorage, no network), so there's no read-modify-write race. ---
 

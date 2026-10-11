@@ -254,7 +254,7 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
   <script type="application/json" id="songs-data" set:html={songsJson} />
   <script>
     import { normalizeTitle } from '../lib/normalize.js';
-    import { addToDraft, removeFromDraft, reorderInDraft, getDraftIds, getPlaylists, removePlaylistFromLibrary, saveDraftAsPlaylist } from '../lib/setlist-client.js';
+    import { addToDraft, removeFromDraft, reorderInDraft, getDraftIds, getPlaylists, removePlaylistFromLibrary, saveDraftAsPlaylist, listSetlists, deleteSetlist } from '../lib/setlist-client.js';
 
     const data = JSON.parse(document.getElementById('songs-data').textContent);
     const input = document.getElementById('search');
@@ -272,6 +272,8 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
     let currentTab = 'all';
     let selectedIndex = -1;
     let cachedPlaylists = [];
+    let publicLists = [];
+    let publicListsLoaded = false;
     let draftNameValue = '';
 
     function getFavorites() {
@@ -479,7 +481,7 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
 
           const removeBtn = document.createElement('button');
           removeBtn.type = 'button';
-          removeBtn.textContent = 'Remove';
+          removeBtn.textContent = 'Forget';
           removeBtn.addEventListener('click', () => {
             removePlaylistFromLibrary(playlist.id);
             renderPlaylistsTab();
@@ -489,12 +491,59 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
           results.appendChild(li);
         }
       }
+
+      const publicLabel = document.createElement('li');
+      publicLabel.className = 'playlist-section-label';
+      publicLabel.textContent = 'All Service Lists';
+      results.appendChild(publicLabel);
+
+      if (publicLists.length === 0) {
+        const emptyLi = document.createElement('li');
+        emptyLi.className = 'set-controls';
+        emptyLi.textContent = publicListsLoaded ? 'No service lists have been saved yet.' : 'Loading…';
+        results.appendChild(emptyLi);
+      }
+      for (const list of publicLists) {
+        const li = document.createElement('li');
+        li.className = 'set-controls';
+
+        const link = document.createElement('a');
+        link.href = `/set/${list.id}/`;
+        link.textContent = `${list.name} (${list.count} song${list.count === 1 ? '' : 's'})`;
+        li.appendChild(link);
+
+        const deleteBtn = document.createElement('button');
+        deleteBtn.type = 'button';
+        deleteBtn.textContent = 'Delete';
+        deleteBtn.addEventListener('click', async () => {
+          if (!confirm(`Delete "${list.name}" for everyone? This can't be undone from the site.`)) return;
+          try {
+            await deleteSetlist(list.id);
+            removePlaylistFromLibrary(list.id);
+            publicLists = publicLists.filter((l) => l.id !== list.id);
+            renderPlaylistsTab();
+          } catch (err) {
+            showTransientStatus(err.message);
+          }
+        });
+        li.appendChild(deleteBtn);
+
+        results.appendChild(li);
+      }
+    }
+
+    // Refresh the public listing, then redraw if the tab is still showing.
+    async function loadPublicLists() {
+      try { publicLists = await listSetlists(); }
+      catch (err) { showTransientStatus(err.message); }
+      publicListsLoaded = true;
+      if (currentTab === 'set' && !input.value) renderPlaylistsTab();
     }
 
     function renderCurrentTab() {
       if (currentTab === 'favorites') renderFavoritesTab();
       else if (currentTab === 'recent') renderRecentTab();
-      else if (currentTab === 'set') renderPlaylistsTab();
+      else if (currentTab === 'set') { renderPlaylistsTab(); loadPublicLists(); }
       else renderBrowse(1);
     }
 

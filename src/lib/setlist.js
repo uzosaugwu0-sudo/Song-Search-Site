@@ -21,6 +21,37 @@ export function buildSetlistValue(songIds, name) {
   return JSON.stringify({ songIds, name, updatedAt: new Date().toISOString() });
 }
 
+export const SOFT_DELETE_TTL_SECONDS = 30 * 24 * 60 * 60;
+
+export function buildSetlistMetadata(songIds, name, updatedAt) {
+  return { name, count: songIds.length, updatedAt };
+}
+
+// Writes the list plus the summary the public listing reads from kv.list().
+export function putSetlist(kv, id, songIds, name) {
+  const value = buildSetlistValue(songIds, name);
+  const { updatedAt } = JSON.parse(value);
+  return kv.put(id, value, { metadata: buildSetlistMetadata(songIds, name, updatedAt) }).then(() => value);
+}
+
+// Returns the parsed list, or null if it doesn't exist or was soft-deleted.
+export function parseLiveSetlist(raw) {
+  if (raw === null) return null;
+  const data = JSON.parse(raw);
+  return data.deleted ? null : data;
+}
+
+export function markDeleted(raw) {
+  return JSON.stringify({ ...JSON.parse(raw), deleted: true });
+}
+
+export function toListEntries(keys) {
+  return keys
+    .filter((k) => k.metadata && !k.metadata.deleted)
+    .map((k) => ({ id: k.name, ...k.metadata }))
+    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+}
+
 export function prepareSetlistName(requestedName) {
   const name = typeof requestedName === 'string' ? requestedName.trim() : '';
   if (name.length === 0) {

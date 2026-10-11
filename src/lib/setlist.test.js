@@ -143,3 +143,33 @@ test('prepareSetlistName rejects a name longer than MAX_SETLIST_NAME_LENGTH char
   const result = prepareSetlistName(name);
   assert.equal(result.error, 'A set list name can be at most 100 characters');
 });
+
+import { buildSetlistMetadata, toListEntries, parseLiveSetlist, markDeleted, SOFT_DELETE_TTL_SECONDS } from './setlist.js';
+
+test('buildSetlistMetadata summarises name, count and updatedAt', () => {
+  assert.deepEqual(buildSetlistMetadata(['a', 'b'], 'Sunday', '2026-10-11T00:00:00.000Z'), {
+    name: 'Sunday', count: 2, updatedAt: '2026-10-11T00:00:00.000Z',
+  });
+});
+
+test('toListEntries drops deleted lists and sorts newest first', () => {
+  const keys = [
+    { name: 'old', metadata: { name: 'Old', count: 1, updatedAt: '2026-01-01T00:00:00.000Z' } },
+    { name: 'gone', metadata: { deleted: true } },
+    { name: 'new', metadata: { name: 'New', count: 3, updatedAt: '2026-06-01T00:00:00.000Z' } },
+  ];
+  assert.deepEqual(toListEntries(keys).map((e) => e.id), ['new', 'old']);
+});
+
+test('parseLiveSetlist returns null for missing or deleted lists', () => {
+  assert.equal(parseLiveSetlist(null), null);
+  assert.equal(parseLiveSetlist(JSON.stringify({ songIds: [], name: 'x', deleted: true })), null);
+  assert.equal(parseLiveSetlist(JSON.stringify({ songIds: ['a'], name: 'x' })).name, 'x');
+});
+
+test('markDeleted flags the list and keeps its songs for the recovery window', () => {
+  const value = JSON.parse(markDeleted(JSON.stringify({ songIds: ['a'], name: 'x' })));
+  assert.equal(value.deleted, true);
+  assert.deepEqual(value.songIds, ['a']);
+  assert.equal(SOFT_DELETE_TTL_SECONDS, 30 * 24 * 60 * 60);
+});

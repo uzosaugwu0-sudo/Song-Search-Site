@@ -1,6 +1,7 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import { loadSongs } from '../../lib/songs-data.js';
+import { parseLiveSetlist } from '../../lib/setlist.js';
 
 export const prerender = false;
 
@@ -8,15 +9,14 @@ Astro.response.headers.set('Cache-Control', 'no-store');
 
 const { id } = Astro.params;
 const kv = Astro.locals.runtime.env.SETLISTS;
-const raw = await kv.get(id);
+const liveSet = parseLiveSetlist(await kv.get(id));
 const songs = await loadSongs(Astro.locals.runtime.env.SONGS_DATA);
 
 let initialSongIds = [];
 let initialName = 'Untitled Set';
-if (raw) {
-  const data = JSON.parse(raw);
-  initialSongIds = data.songIds;
-  initialName = data.name || 'Untitled Set';
+if (liveSet) {
+  initialSongIds = liveSet.songIds;
+  initialName = liveSet.name || 'Untitled Set';
 }
 
 const songsJson = JSON.stringify(songs.map(({ id, slug, title, author }) => ({ id, slug, title, author })))
@@ -24,11 +24,11 @@ const songsJson = JSON.stringify(songs.map(({ id, slug, title, author }) => ({ i
 const setInitJson = JSON.stringify({ setId: id, initialSongIds, initialName })
   .replace(/</g, '\\u003c');
 ---
-<Layout title={raw === null ? 'Set List — Song Search' : `${initialName} — Song Search`} description="A shared, editable list of songs.">
+<Layout title={liveSet === null ? 'Set List — Song Search' : `${initialName} — Song Search`} description="A shared, editable list of songs.">
   <div class="page">
     <p><a href="/">← Back to search</a></p>
 
-    {raw === null ? (
+    {liveSet === null ? (
       <div>
         <h1>Set List Not Found</h1>
         <p class="status">This set list doesn't exist. It may have been mistyped, or the link is wrong.</p>
@@ -43,6 +43,7 @@ const setInitJson = JSON.stringify({ setId: id, initialSongIds, initialName })
           <button id="rename-btn">Rename</button>
           <button id="copy-link">Copy link</button>
           <button id="save-to-library">Save to Service List</button>
+          <button id="delete-set" class="danger">Delete</button>
         </div>
         <p id="status"></p>
         <ul id="set-songs"></ul>
@@ -81,6 +82,10 @@ const setInitJson = JSON.stringify({ setId: id, initialSongIds, initialName })
       font-size: 0.95rem;
     }
     .actions button:hover { border-color: var(--color-border-strong); }
+    .actions button.danger {
+      color: var(--color-danger);
+      border-color: var(--color-danger-border);
+    }
     #copy-link {
       background: var(--color-primary);
       color: var(--color-on-primary);
@@ -177,7 +182,7 @@ const setInitJson = JSON.stringify({ setId: id, initialSongIds, initialName })
   <script type="application/json" id="songs-data" set:html={songsJson} />
   <script type="application/json" id="set-init-data" set:html={setInitJson} />
   <script>
-    import { updateSetlist, isInLibrary, addPlaylistToLibrary, updatePlaylistNameInLibrary } from '../../lib/setlist-client.js';
+    import { updateSetlist, deleteSetlist, isInLibrary, addPlaylistToLibrary, removePlaylistFromLibrary, updatePlaylistNameInLibrary } from '../../lib/setlist-client.js';
 
     const setSongsList = document.getElementById('set-songs');
 
@@ -326,6 +331,17 @@ const setInitJson = JSON.stringify({ setId: id, initialSongIds, initialName })
       saveToLibraryBtn.addEventListener('click', () => {
         addPlaylistToLibrary(setId, currentName);
         updateSaveToLibraryButton();
+      });
+
+      document.getElementById('delete-set').addEventListener('click', async () => {
+        if (!confirm(`Delete "${currentName}" for everyone? This can't be undone from the site.`)) return;
+        try {
+          await deleteSetlist(setId);
+          removePlaylistFromLibrary(setId);
+          location.href = '/';
+        } catch (err) {
+          statusEl.textContent = err.message;
+        }
       });
 
       const addInput = document.getElementById('add-search');
