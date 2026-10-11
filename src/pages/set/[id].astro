@@ -39,10 +39,12 @@ const setInitJson = JSON.stringify({ setId: id, initialSongIds, initialName })
           <span id="playlist-name">{initialName}</span>
           <input type="text" id="rename-input" value={initialName} hidden />
         </h1>
+        <p class="list-date"><time id="list-date" datetime={liveSet.createdAt ?? liveSet.updatedAt}></time></p>
         <div class="actions">
           <button id="rename-btn">Rename</button>
           <button id="copy-link">Copy link</button>
           <button id="save-to-library">Save to Service List</button>
+          <button id="add-section">Add section</button>
           <button id="delete-set" class="danger">Delete</button>
         </div>
         <p id="status"></p>
@@ -130,6 +132,16 @@ const setInitJson = JSON.stringify({ setId: id, initialSongIds, initialName })
       text-decoration: none;
     }
     .set-song a:hover { text-decoration: underline; }
+    .list-date {
+      color: var(--color-muted-foreground);
+      margin: calc(var(--space-2) * -1) 0 var(--space-4);
+    }
+    .set-section {
+      background: transparent;
+      border-color: var(--color-border-strong);
+      font-weight: 700;
+      margin-top: var(--space-3);
+    }
     .set-song .author {
       color: var(--color-muted-foreground);
       font-size: 0.9rem;
@@ -183,6 +195,8 @@ const setInitJson = JSON.stringify({ setId: id, initialSongIds, initialName })
   <script type="application/json" id="set-init-data" set:html={setInitJson} />
   <script>
     import { updateSetlist, deleteSetlist, isInLibrary, addPlaylistToLibrary, removePlaylistFromLibrary, updatePlaylistNameInLibrary } from '../../lib/setlist-client.js';
+    import { isHeading, countSongs, addHeading, renameHeading, askSectionName } from '../../lib/sections.js';
+    import { formatListDate } from '../../lib/setlist.js';
 
     const setSongsList = document.getElementById('set-songs');
 
@@ -193,17 +207,24 @@ const setInitJson = JSON.stringify({ setId: id, initialSongIds, initialName })
       let currentIds = initialSongIds;
       let currentName = initialName;
       const statusEl = document.getElementById('status');
+      const dateEl = document.getElementById('list-date');
+      dateEl.textContent = formatListDate(dateEl.dateTime);
 
       function renderSetSongs() {
         setSongsList.replaceChildren();
-        if (currentIds.length === 0) {
+        const songCount = countSongs(currentIds);
+        if (songCount === 0) {
           statusEl.textContent = 'No songs in this set yet — add some below.';
         } else {
-          statusEl.textContent = `${currentIds.length} song${currentIds.length === 1 ? '' : 's'} in this set`;
+          statusEl.textContent = `${songCount} song${songCount === 1 ? '' : 's'} in this set`;
         }
 
-        currentIds.forEach((songId, index) => {
-          const song = songById.get(songId);
+        currentIds.forEach((item, index) => {
+          if (isHeading(item)) {
+            setSongsList.appendChild(buildHeadingRow(item, index));
+            return;
+          }
+          const song = songById.get(item);
           if (!song) return;
 
           const li = document.createElement('li');
@@ -249,6 +270,50 @@ const setInitJson = JSON.stringify({ setId: id, initialSongIds, initialName })
         });
       }
 
+      function buildHeadingRow(heading, index) {
+        const li = document.createElement('li');
+        li.className = 'set-song set-section';
+
+        const title = document.createElement('span');
+        title.textContent = heading.section;
+        li.appendChild(title);
+
+        const controls = document.createElement('span');
+        controls.className = 'controls';
+
+        const upBtn = document.createElement('button');
+        upBtn.type = 'button';
+        upBtn.textContent = '↑';
+        upBtn.disabled = index === 0;
+        upBtn.addEventListener('click', () => reorder(index, -1));
+        controls.appendChild(upBtn);
+
+        const downBtn = document.createElement('button');
+        downBtn.type = 'button';
+        downBtn.textContent = '↓';
+        downBtn.disabled = index === currentIds.length - 1;
+        downBtn.addEventListener('click', () => reorder(index, 1));
+        controls.appendChild(downBtn);
+
+        const renameBtn = document.createElement('button');
+        renameBtn.type = 'button';
+        renameBtn.textContent = 'Rename';
+        renameBtn.addEventListener('click', () => {
+          const name = askSectionName(heading.section);
+          if (name) persist(renameHeading(currentIds, index, name));
+        });
+        controls.appendChild(renameBtn);
+
+        const removeBtn = document.createElement('button');
+        removeBtn.type = 'button';
+        removeBtn.textContent = 'Remove';
+        removeBtn.addEventListener('click', () => removeAt(index));
+        controls.appendChild(removeBtn);
+
+        li.appendChild(controls);
+        return li;
+      }
+
       async function persist(nextIds) {
         currentIds = nextIds;
         renderSetSongs();
@@ -277,6 +342,11 @@ const setInitJson = JSON.stringify({ setId: id, initialSongIds, initialName })
       }
 
       renderSetSongs();
+
+      document.getElementById('add-section').addEventListener('click', () => {
+        const name = askSectionName();
+        if (name) persist(addHeading(currentIds, name));
+      });
 
       const nameSpan = document.getElementById('playlist-name');
       const renameInput = document.getElementById('rename-input');
