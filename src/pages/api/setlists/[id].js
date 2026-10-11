@@ -17,8 +17,8 @@ export async function GET({ params, locals }) {
 
 export async function PUT({ params, request, locals }) {
   const kv = locals.runtime.env.SETLISTS;
-  const existing = await kv.get(params.id);
-  if (parseLiveSetlist(existing) === null) {
+  const existingData = parseLiveSetlist(await kv.get(params.id));
+  if (existingData === null) {
     return jsonResponse({ error: 'Not found' }, 404);
   }
 
@@ -43,10 +43,12 @@ export async function PUT({ params, request, locals }) {
     }
     name = nameResult.name;
   } else {
-    name = JSON.parse(existing).name;
+    name = existingData.name;
   }
 
-  const value = await putSetlist(kv, params.id, songResult.songIds, name);
+  const value = await putSetlist(kv, params.id, songResult.songIds, name, {
+    createdAt: existingData.createdAt ?? existingData.updatedAt,
+  });
   return new Response(value, {
     status: 200,
     headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
