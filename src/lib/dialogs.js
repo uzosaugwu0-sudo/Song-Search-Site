@@ -18,6 +18,7 @@ function openDialog({ message, value, maxLength, confirmLabel, danger, withInput
     if (withInput) {
       field = document.createElement('input');
       field.type = 'text';
+      field.className = 'input';
       field.value = value;
       field.maxLength = maxLength;
       field.setAttribute('aria-label', message);
@@ -29,6 +30,7 @@ function openDialog({ message, value, maxLength, confirmLabel, danger, withInput
 
     const cancelBtn = document.createElement('button');
     cancelBtn.type = 'button';
+    cancelBtn.className = 'btn';
     cancelBtn.textContent = 'Cancel';
     cancelBtn.addEventListener('click', () => dialog.close('cancel'));
     actions.appendChild(cancelBtn);
@@ -37,7 +39,7 @@ function openDialog({ message, value, maxLength, confirmLabel, danger, withInput
     okBtn.type = 'submit';
     okBtn.value = 'ok';
     okBtn.textContent = confirmLabel;
-    okBtn.className = danger ? 'danger' : 'primary';
+    okBtn.className = danger ? 'btn btn-danger' : 'btn btn-primary';
     actions.appendChild(okBtn);
 
     form.appendChild(actions);

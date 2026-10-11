@@ -1,0 +1,111 @@
+/* Shared components. Colours, spacing, radii and type sizes come from the tokens in Layout.astro. */
+
+.page { max-width: 680px; margin: 0 auto; }
+
+/* Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: var(--control-height);
+  padding: 0 var(--space-5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-card);
+  color: var(--color-card-foreground);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  line-height: 1.2;
+  text-decoration: none;
+  transition: background 150ms ease, border-color 150ms ease, color 150ms ease;
+}
+.btn:hover:not(:disabled) { background: var(--color-muted); border-color: var(--color-border-strong); }
+.btn:disabled { opacity: 0.5; cursor: default; }
+.btn-primary {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: var(--color-on-primary);
+}
+.btn-primary:hover:not(:disabled) { background: var(--color-primary); border-color: var(--color-primary); opacity: 0.9; }
+.btn-danger { color: var(--color-danger); border-color: var(--color-danger-border); }
+.btn-sm { min-height: var(--control-height-compact); padding: 0 var(--space-3); }
+.btn-icon { width: var(--control-height); padding: 0; border-radius: var(--radius-pill); }
+.btn-icon.btn-sm { width: var(--control-height-compact); }
+
+/* Text input */
+.input {
+  width: 100%;
+  min-height: var(--control-height);
+  padding: 0 var(--space-4);
+  font-size: var(--text-base);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-control);
+  background: var(--color-card);
+  color: var(--color-card-foreground);
+}
+
+/* Surfaces */
+.card {
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+}
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-card);
+}
+.row-title {
+  font-weight: 600;
+  color: var(--color-card-foreground);
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+.row-title:hover { text-decoration: underline; }
+.row-controls { margin-left: auto; display: flex; flex-wrap: wrap; gap: var(--space-2); }
+
+/* Small labels */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px var(--space-3);
+  border-radius: var(--radius-pill);
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.section-label {
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-muted-foreground);
+}
+
+/* Site dialogs (src/lib/dialogs.js) */
+.site-dialog {
+  width: min(92vw, 420px);
+  padding: var(--space-5);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-card);
+  background: var(--color-card);
+  color: var(--color-card-foreground);
+  box-shadow: var(--shadow-raised);
+}
+.site-dialog::backdrop { background: rgba(0, 0, 0, 0.45); }
+.site-dialog p { margin: 0 0 var(--space-4); }
+.site-dialog .input { margin-bottom: var(--space-4); }
+.site-dialog-actions { display: flex; justify-content: flex-end; gap: var(--space-3); }
+
+@media (prefers-reduced-motion: reduce) {
+  .btn { transition: none; }
+}
