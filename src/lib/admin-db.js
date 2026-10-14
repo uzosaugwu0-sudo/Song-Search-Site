@@ -3,8 +3,15 @@ import { getSqlJs } from './sqlite-worker-init.js';
 import { isSqliteFile, parseSongDatabases } from './sqlite-parse.js';
 import { backupCurrentPair } from './r2-backup.js';
 import { findDuplicateGroups } from './duplicate-groups.js';
+import { exceedsUploadLimit } from './upload-limits.js';
 
 export async function commitDatabasePair({ r2, kv, songsDbBytes, wordsDbBytes }) {
+  if (exceedsUploadLimit(songsDbBytes)) {
+    return { error: 'Songs.db is too large', details: [] };
+  }
+  if (exceedsUploadLimit(wordsDbBytes)) {
+    return { error: 'SongWords.db is too large', details: [] };
+  }
   if (!isSqliteFile(songsDbBytes)) {
     return { error: 'Songs.db is not a valid SQLite database file', details: [] };
   }

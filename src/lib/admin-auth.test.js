@@ -101,3 +101,17 @@ test('rate limit is tracked per IP independently', async () => {
   assert.equal(await checkLoginRateLimit(kv, '1.1.1.1'), false);
   assert.equal(await checkLoginRateLimit(kv, '2.2.2.2'), true);
 });
+
+import { constantTimeEqual } from './admin-auth.js';
+
+test('constantTimeEqual returns true only for an exact match', () => {
+  assert.equal(constantTimeEqual('correct-horse', 'correct-horse'), true);
+  assert.equal(constantTimeEqual('correct-horse', 'wrong'), false);
+});
+
+test('constantTimeEqual is safe against differing lengths and non-string input', () => {
+  assert.equal(constantTimeEqual('abc', 'abcd'), false);
+  assert.equal(constantTimeEqual('abc', ''), false);
+  assert.equal(constantTimeEqual(undefined, 'abc'), false);
+  assert.equal(constantTimeEqual('abc', undefined), false);
+});

@@ -70,3 +70,17 @@ test('backupTimestampsFromListing returns an empty array when there are no backu
 test('formatBackupLabel turns a timestamp into a human-readable "date time" string', () => {
   assert.equal(formatBackupLabel('2026-09-29T20-30-05'), '2026-09-29 20:30:05');
 });
+
+import { isValidBackupTimestamp } from './r2-backup.js';
+
+test('isValidBackupTimestamp accepts only the YYYY-MM-DDTHH-mm-ss shape', () => {
+  assert.equal(isValidBackupTimestamp('2026-09-29T20-30-05'), true);
+});
+
+test('isValidBackupTimestamp rejects path traversal and malformed input', () => {
+  assert.equal(isValidBackupTimestamp('../../current'), false);
+  assert.equal(isValidBackupTimestamp('2026-09-29T20-30-05/../../current'), false);
+  assert.equal(isValidBackupTimestamp(''), false);
+  assert.equal(isValidBackupTimestamp(undefined), false);
+  assert.equal(isValidBackupTimestamp(123), false);
+});

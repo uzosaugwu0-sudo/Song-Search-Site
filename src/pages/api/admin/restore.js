@@ -1,7 +1,7 @@
 // src/pages/api/admin/restore.js
 import { requireAdminSession } from '../../../lib/admin-auth.js';
 import { commitDatabasePair } from '../../../lib/admin-db.js';
-import { backupPrefix } from '../../../lib/r2-backup.js';
+import { backupPrefix, isValidBackupTimestamp } from '../../../lib/r2-backup.js';
 import { jsonResponse } from '../../../lib/setlist.js';
 
 export const prerender = false;
@@ -19,8 +19,8 @@ export async function POST({ request, locals }) {
     return jsonResponse({ error: 'Invalid JSON body' }, 400);
   }
 
-  if (typeof body.timestamp !== 'string' || body.timestamp.length === 0) {
-    return jsonResponse({ error: 'A backup timestamp is required' }, 400);
+  if (!isValidBackupTimestamp(body.timestamp)) {
+    return jsonResponse({ error: 'A valid backup timestamp is required' }, 400);
   }
 
   const prefix = backupPrefix(body.timestamp);

@@ -31,3 +31,10 @@ export async function backupCurrentPair(r2, now = new Date()) {
   await r2.put(`${prefix}SongWords.db`, await words.arrayBuffer());
   return timestamp;
 }
+
+const BACKUP_TIMESTAMP_RE = /^\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}$/;
+
+// Guards backupPrefix() against being fed anything but the expected timestamp shape.
+export function isValidBackupTimestamp(timestamp) {
+  return typeof timestamp === 'string' && BACKUP_TIMESTAMP_RE.test(timestamp);
+}

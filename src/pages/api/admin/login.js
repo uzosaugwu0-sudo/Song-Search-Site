@@ -6,6 +6,7 @@ import {
   recordFailedLogin,
   clearLoginRateLimit,
   getClientIp,
+  constantTimeEqual,
 } from '../../../lib/admin-auth.js';
 import { jsonResponse } from '../../../lib/setlist.js';
 
@@ -30,7 +31,7 @@ export async function POST({ request, locals }) {
     return jsonResponse({ error: 'Invalid JSON body' }, 400);
   }
 
-  if (body.password !== env.ADMIN_PASSWORD) {
+  if (!constantTimeEqual(body.password, env.ADMIN_PASSWORD)) {
     await recordFailedLogin(env.ADMIN_RATE_LIMIT, ip);
     return jsonResponse({ error: 'Incorrect password' }, 401);
   }
