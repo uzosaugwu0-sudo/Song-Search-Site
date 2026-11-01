@@ -72,6 +72,13 @@ search box and the same arrow-based reordering, auto-persisting every change via
 - No change to "Your Service Lists" (the local bookmark list), "All Service
   Lists" (grouped by day), rename, Copy link, Delete, or the soft-delete behavior.
   Those are untouched.
+- No change to adding, renaming, or removing sections on an already-created
+  list, from its own page — that capability stays exactly as it works today.
+  "Structure before content" governs how a list is *created*; it does not
+  freeze a list's sections once it exists. (This was not discussed directly
+  with the requester; it's the low-risk default — nothing in this design asked
+  for section editing to be locked after creation, and removing an existing
+  capability nobody asked to lose would be a real regression.)
 - No visual redesign beyond what this flow change requires. This is not a styling
   pass.
 - No drag-and-drop library and no new npm dependency of any kind. The rest of the
@@ -111,6 +118,15 @@ Ship this and it's a failure if:
   single-column layout with sections stacked under the search box, and a
   kanban-style side-by-side board); the stacked layout was chosen specifically
   because it holds up at phone width without changing shape.
+- **The quick-add entry points elsewhere in the site go away.** Today, the `+`
+  button on every search result card (`buildCard()` in `src/pages/index.astro`,
+  shown on the Home/Favorites/Recently Viewed tabs) and the "Add to List" button
+  on a song's own page (`src/pages/song/[slug].astro`) both write into the
+  draft this design removes. Confirmed: both are removed outright, not
+  repointed. Adding a song becomes possible only from inside a list — during
+  its creation, or afterward on its own page. Browsing songs elsewhere on the
+  site (search, Favorites, Recently Viewed) is now purely for finding/reading a
+  song, not for building a list.
 
 ## Constraints
 
@@ -133,6 +149,20 @@ Ship this and it's a failure if:
   it, inline on that same tab (no new route), matching how the tab already works
   today. This is a call, not something the requester weighed in on; correctable
   if it doesn't feel right once built.
+- **One page, not a multi-step wizard.** The name field, section builder, and
+  search+board area all live on the same view: the search/board is visible but
+  disabled (not hidden) until a name and at least one section exist, rather
+  than being a separate step you navigate to. This keeps "structure before
+  content" as a gate on one page rather than introducing wizard
+  navigation/back-button state the design never asked for.
+- **In-progress creation state is plain in-memory JS, not `sessionStorage` or
+  any other persistence.** An accidental reload loses an unsaved, in-progress
+  list. This is consistent with the design's anti-goal against reintroducing a
+  lingering draft under a different name, and keeps "one linear action" literal
+  — sitting down, doing it in one pass, not something you partially do and come
+  back to later (that's what the old draft already did, and that's the
+  friction being removed). Revisit if this turns out to bite people in
+  practice.
 - **Drag-and-drop mechanics.** Implement with Pointer Events
   (`pointerdown`/`pointermove`/`pointerup`), which unify mouse and touch without
   a library — this is the natural fit given the no-dependency constraint and the
