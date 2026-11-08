@@ -1,5 +1,8 @@
 const DRAFT_KEY = 'songSearchSetDraft';
 const PLAYLISTS_KEY = 'songSearchPlaylists';
+// Task 8 (not yet run) removes song/[slug].astro's "Add to List" button, the
+// last caller of addToDraft — keep it (and DRAFT_KEY/readList/writeList)
+// until then, or the build breaks on that file's now-dangling import.
 
 function readList(key) {
   try { return JSON.parse(localStorage.getItem(key) || '[]'); }
@@ -60,32 +63,6 @@ export function addToDraft(songId) {
   return next;
 }
 
-export function removeFromDraft(songId) {
-  const next = getDraftIds().filter((id) => id !== songId);
-  writeList(DRAFT_KEY, next);
-  return next;
-}
-
-export function reorderInDraft(songId, direction) {
-  const ids = getDraftIds();
-  const index = ids.indexOf(songId);
-  if (index === -1) return ids;
-  const target = index + direction;
-  if (target < 0 || target >= ids.length) return ids;
-  const next = [...ids];
-  [next[index], next[target]] = [next[target], next[index]];
-  writeList(DRAFT_KEY, next);
-  return next;
-}
-
-// Applies a pure transform (items => items) to the draft and saves it.
-// Used for heading operations, which are addressed by position.
-export function updateDraft(transform) {
-  const next = transform(getDraftIds());
-  writeList(DRAFT_KEY, next);
-  return next;
-}
-
 // --- Library helpers: the local "My Playlists" list. Purely a per-browser
 // bookmark list — it never affects the set list stored server-side. ---
 
@@ -115,11 +92,4 @@ export function updatePlaylistNameInLibrary(id, name) {
   const next = getPlaylists().map((p) => (p.id === id ? { ...p, name } : p));
   writeList(PLAYLISTS_KEY, next);
   return next;
-}
-
-export async function saveDraftAsPlaylist(name) {
-  const data = await createSetlist(getDraftIds(), name);
-  addPlaylistToLibrary(data.id, name);
-  writeList(DRAFT_KEY, []);
-  return data.id;
 }

@@ -86,14 +86,6 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
       gap: var(--space-4);
     }
     .result-item { position: relative; }
-    .add-to-set-btn {
-      position: absolute;
-      top: var(--space-3);
-      right: var(--space-3);
-      color: var(--color-primary);
-      font-size: 1.1rem;
-      line-height: 1;
-    }
     .draft-group, .date-group { grid-column: 1 / -1; list-style: none; }
     .draft-group > details > summary, .date-group > details > summary {
       display: flex;
@@ -139,6 +131,62 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
     .playlist-name-input { flex: 1; min-width: 200px; width: auto; }
     .set-song-row { grid-column: 1 / -1; }
     .set-section-row { font-weight: 700; border-bottom: 2px solid var(--color-border-strong); }
+    .new-service-list {
+      grid-column: 1 / -1;
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+    }
+    .new-service-list-sections {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+    }
+    .new-service-list-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: var(--space-3);
+    }
+    .section-board { display: flex; flex-direction: column; gap: var(--space-3); }
+    .section-board-disabled { opacity: 0.5; pointer-events: none; }
+    .section-board-results, .section-board-zones {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+    }
+    .section-board-result {
+      width: 100%;
+      justify-content: flex-start;
+      text-align: left;
+      font-weight: 500;
+      touch-action: none;
+    }
+    .section-board-zone {
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-control);
+      padding: var(--space-3);
+    }
+    .section-board-zone.drag-over {
+      border-color: var(--color-primary);
+      background: var(--color-primary-soft);
+    }
+    .section-board-zone-songs {
+      list-style: none;
+      margin: var(--space-2) 0 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+    }
+    .section-board-zone-songs > .row { touch-action: none; }
+    .section-board-result.dragging,
+    .section-board-zone-songs > .row.dragging { opacity: 0.5; }
     .result-card {
       display: block;
       padding: var(--space-4) calc(var(--control-height-compact) + var(--space-6)) var(--space-4) var(--space-5);
@@ -177,11 +225,12 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
 
   <script type="application/json" id="songs-data" set:html={songsJson} />
   <script>
-    import { normalizeTitle } from '../lib/normalize.js';
-    import { isHeading, addHeading, renameHeading, removeAt, moveItem, groupBySection } from '../lib/sections.js';
+    import { isHeading, addHeading, renameHeading, removeAt, countSongs, countUnsorted } from '../lib/sections.js';
     import { askSectionName, confirmDialog } from '../lib/dialogs.js';
     import { formatListDate, groupListsByDay } from '../lib/setlist.js';
-    import { addToDraft, removeFromDraft, reorderInDraft, getDraftIds, getPlaylists, removePlaylistFromLibrary, saveDraftAsPlaylist, listSetlists, deleteSetlist, updateDraft } from '../lib/setlist-client.js';
+    import { getPlaylists, removePlaylistFromLibrary, listSetlists, deleteSetlist, createSetlist, addPlaylistToLibrary } from '../lib/setlist-client.js';
+    import { fuzzyTitleMatches, snippetParts } from '../lib/song-search.js';
+    import { mountSectionBoard } from '../lib/section-board.js';
 
     const data = JSON.parse(document.getElementById('songs-data').textContent);
     const input = document.getElementById('search');
@@ -201,15 +250,22 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
     let cachedPlaylists = [];
     let publicLists = [];
     let publicListsLoaded = false;
-    // Open/closed state of drop-downs, kept across re-renders.
-    // ponytail: draft sections are remembered by name, so duplicate names share a state.
-    const closedDraftSections = new Set();
+    // Open/closed state of day-group drop-downs, kept across re-renders.
     const dateOpenState = new Map();
     // Local changes KV's eventual consistency may not show yet (up to ~60s).
     const justCreated = new Map();
     const justDeleted = new Set();
     const PUBLIC_REFRESH_MS = 30000;
-    let draftNameValue = '';
+
+    // New-list creation: plain in-memory state, intentionally not persisted
+    // (see the design's "no lingering draft" goal) across a reload. Kept
+    // across re-renders of the Service List tab by reusing creationViewEl
+    // rather than rebuilding it, so a background refresh never loses a
+    // half-typed name or the board's own typed search query.
+    let creatingList = false;
+    let creationName = '';
+    let creationItems = [];
+    let creationViewEl = null;
 
     function getFavorites() {
       try { return JSON.parse(localStorage.getItem('songSearchFavorites') || '[]'); }
@@ -277,129 +333,6 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
       for (const song of recentSongs) results.appendChild(buildCard(song, '', 1, 'recent'));
     }
 
-    function buildPlaylistSongRow(song, { showUp, showDown, onUp, onDown, onRemove }) {
-      const li = document.createElement('li');
-      li.className = 'set-song-row row';
-
-      const link = document.createElement('a');
-      link.className = 'row-title';
-      link.href = `/song/${song.slug}/?from=set`;
-      link.textContent = song.title;
-      li.appendChild(link);
-
-      if (song.author) {
-        const author = document.createElement('span');
-        author.className = 'result-author';
-        author.textContent = song.author;
-        li.appendChild(author);
-      }
-
-      const controls = document.createElement('span');
-      controls.className = 'row-controls';
-
-      const upBtn = document.createElement('button');
-      upBtn.type = 'button';
-      upBtn.className = 'btn btn-sm';
-      upBtn.textContent = '↑';
-      upBtn.disabled = !showUp;
-      upBtn.addEventListener('click', onUp);
-      controls.appendChild(upBtn);
-
-      const downBtn = document.createElement('button');
-      downBtn.type = 'button';
-      downBtn.className = 'btn btn-sm';
-      downBtn.textContent = '↓';
-      downBtn.disabled = !showDown;
-      downBtn.addEventListener('click', onDown);
-      controls.appendChild(downBtn);
-
-      const removeBtn = document.createElement('button');
-      removeBtn.type = 'button';
-      removeBtn.className = 'btn btn-sm btn-danger';
-      removeBtn.textContent = 'Remove';
-      removeBtn.addEventListener('click', onRemove);
-      controls.appendChild(removeBtn);
-
-      li.appendChild(controls);
-      return li;
-    }
-
-    function buildDraftHeadingRow(heading, index, total, songCount) {
-      const li = document.createElement('div');
-      li.className = 'set-song-row set-section-row row';
-
-      const title = document.createElement('span');
-      title.textContent = `${heading.section} (${songCount})`;
-      li.appendChild(title);
-
-      const controls = document.createElement('span');
-      controls.className = 'row-controls';
-
-      const upBtn = document.createElement('button');
-      upBtn.type = 'button';
-      upBtn.className = 'btn btn-sm';
-      upBtn.textContent = '↑';
-      upBtn.disabled = index === 0;
-      upBtn.addEventListener('click', () => { updateDraft((items) => moveItem(items, index, -1)); renderPlaylistsTab(); });
-      controls.appendChild(upBtn);
-
-      const downBtn = document.createElement('button');
-      downBtn.type = 'button';
-      downBtn.className = 'btn btn-sm';
-      downBtn.textContent = '↓';
-      downBtn.disabled = index === total - 1;
-      downBtn.addEventListener('click', () => { updateDraft((items) => moveItem(items, index, 1)); renderPlaylistsTab(); });
-      controls.appendChild(downBtn);
-
-      const renameBtn = document.createElement('button');
-      renameBtn.type = 'button';
-      renameBtn.className = 'btn btn-sm';
-      renameBtn.textContent = 'Rename';
-      renameBtn.addEventListener('click', async () => {
-        const name = await askSectionName(heading.section);
-        if (!name) return;
-        updateDraft((items) => renameHeading(items, index, name));
-        renderPlaylistsTab();
-      });
-      controls.appendChild(renameBtn);
-
-      const removeBtn = document.createElement('button');
-      removeBtn.type = 'button';
-      removeBtn.className = 'btn btn-sm btn-danger';
-      removeBtn.textContent = 'Remove';
-      removeBtn.addEventListener('click', () => { updateDraft((items) => removeAt(items, index)); renderPlaylistsTab(); });
-      controls.appendChild(removeBtn);
-
-      li.appendChild(controls);
-      return li;
-    }
-
-    // A draft section header (click to open/close) with its songs underneath.
-    function buildDraftSection(group, rows, total) {
-      const name = group.heading.section;
-      const li = document.createElement('li');
-      li.className = 'draft-group';
-
-      const details = document.createElement('details');
-      details.open = !closedDraftSections.has(name);
-      details.addEventListener('toggle', () => {
-        if (details.open) closedDraftSections.delete(name);
-        else closedDraftSections.add(name);
-      });
-
-      const summary = document.createElement('summary');
-      summary.appendChild(buildDraftHeadingRow(group.heading, group.headingIndex, total, rows.length));
-      details.appendChild(summary);
-
-      const songs = document.createElement('ul');
-      songs.className = 'group-songs';
-      rows.forEach((row) => songs.appendChild(row));
-      details.appendChild(songs);
-
-      li.appendChild(details);
-      return li;
-    }
-
     function buildPublicListRow(list) {
       const li = document.createElement('li');
       li.className = 'set-controls row';
@@ -454,7 +387,186 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
       return li;
     }
 
+    function creationIsValid() {
+      return creationName.trim().length > 0
+        && creationItems.some(isHeading)
+        && countSongs(creationItems) > 0
+        && countUnsorted(creationItems) === 0;
+    }
+
+    function startNewList() {
+      creatingList = true;
+      creationName = '';
+      creationItems = [];
+      creationViewEl = null;
+      renderPlaylistsTab();
+    }
+
+    // Builds the whole "New Service List" view once per entry into creation
+    // mode. Internal changes patch just the piece that changed (section
+    // list, board, Create button) instead of rebuilding the view, so the
+    // name input and the board's own search box never lose focus or a
+    // typed query to an unrelated re-render (a background public-list
+    // refresh, switching tabs away and back).
+    function buildNewListView() {
+      const wrap = document.createElement('li');
+      wrap.className = 'new-service-list';
+
+      const nameInput = document.createElement('input');
+      nameInput.type = 'text';
+      nameInput.className = 'input';
+      nameInput.placeholder = 'Name this service list (e.g. Sunday Service — Sept 28)';
+      nameInput.maxLength = 100;
+      nameInput.value = creationName;
+      wrap.appendChild(nameInput);
+
+      const sectionsList = document.createElement('ul');
+      sectionsList.className = 'new-service-list-sections';
+      wrap.appendChild(sectionsList);
+
+      const addSectionBtn = document.createElement('button');
+      addSectionBtn.type = 'button';
+      addSectionBtn.className = 'btn';
+      addSectionBtn.textContent = 'Add section';
+      wrap.appendChild(addSectionBtn);
+
+      const boardContainer = document.createElement('div');
+      boardContainer.className = 'section-board';
+      wrap.appendChild(boardContainer);
+
+      const actions = document.createElement('div');
+      actions.className = 'new-service-list-actions';
+      const cancelBtn = document.createElement('button');
+      cancelBtn.type = 'button';
+      cancelBtn.className = 'btn';
+      cancelBtn.textContent = 'Cancel';
+      const createBtn = document.createElement('button');
+      createBtn.type = 'button';
+      createBtn.className = 'btn btn-primary';
+      createBtn.textContent = 'Create';
+      actions.appendChild(cancelBtn);
+      actions.appendChild(createBtn);
+      wrap.appendChild(actions);
+
+      function renderSections() {
+        sectionsList.replaceChildren();
+        creationItems.filter(isHeading).forEach((heading) => {
+          const li = document.createElement('li');
+          li.className = 'row';
+
+          const label = document.createElement('span');
+          label.className = 'row-title';
+          label.textContent = heading.section;
+          li.appendChild(label);
+
+          const controls = document.createElement('span');
+          controls.className = 'row-controls';
+
+          const renameBtn = document.createElement('button');
+          renameBtn.type = 'button';
+          renameBtn.className = 'btn btn-sm';
+          renameBtn.textContent = 'Rename';
+          renameBtn.addEventListener('click', async () => {
+            const name = await askSectionName(heading.section);
+            if (!name) return;
+            creationItems = renameHeading(creationItems, creationItems.indexOf(heading), name);
+            onCreationChanged();
+          });
+          controls.appendChild(renameBtn);
+
+          const removeBtn = document.createElement('button');
+          removeBtn.type = 'button';
+          removeBtn.className = 'btn btn-sm btn-danger';
+          removeBtn.textContent = 'Remove';
+          removeBtn.addEventListener('click', () => {
+            creationItems = removeAt(creationItems, creationItems.indexOf(heading));
+            onCreationChanged();
+          });
+          controls.appendChild(removeBtn);
+
+          li.appendChild(controls);
+          sectionsList.appendChild(li);
+        });
+      }
+
+      function updateBoardLook() {
+        const ready = creationName.trim().length > 0 && creationItems.some(isHeading);
+        boardContainer.classList.toggle('section-board-disabled', !ready);
+      }
+
+      function updateCreateDisabled() {
+        createBtn.disabled = !creationIsValid();
+      }
+
+      const board = mountSectionBoard(boardContainer, {
+        songs: data,
+        getItems: () => creationItems,
+        onChange: (next) => { creationItems = next; onCreationChanged(); },
+      });
+
+      function onCreationChanged() {
+        renderSections();
+        updateBoardLook();
+        updateCreateDisabled();
+        board.rerender();
+      }
+
+      nameInput.addEventListener('input', () => {
+        creationName = nameInput.value;
+        updateBoardLook();
+        updateCreateDisabled();
+      });
+
+      addSectionBtn.addEventListener('click', async () => {
+        const name = await askSectionName();
+        if (!name) return;
+        creationItems = addHeading(creationItems, name);
+        onCreationChanged();
+      });
+
+      cancelBtn.addEventListener('click', () => {
+        creatingList = false;
+        creationViewEl = null;
+        renderPlaylistsTab();
+      });
+
+      createBtn.addEventListener('click', async () => {
+        createBtn.disabled = true;
+        try {
+          const name = creationName.trim();
+          const created = await createSetlist(creationItems, name);
+          addPlaylistToLibrary(created.id, name);
+          location.href = `/set/${created.id}/`;
+        } catch (err) {
+          createBtn.disabled = false;
+          showTransientStatus(err.message || 'Could not create this service list — check your connection and try again.');
+        }
+      });
+
+      renderSections();
+      updateBoardLook();
+      updateCreateDisabled();
+      return wrap;
+    }
+
     function renderPlaylistsTab() {
+      if (creatingList) {
+        // Reuse the already-mounted view rather than rebuilding it, so a
+        // background public-list refresh or a tab switch away and back
+        // never loses an in-progress name, sections, or the board's own
+        // typed search query.
+        if (!creationViewEl) creationViewEl = buildNewListView();
+        if (!results.contains(creationViewEl)) {
+          showTabs();
+          pagination.style.display = 'none';
+          results.replaceChildren();
+          selectedIndex = -1;
+          status.textContent = 'Search, then drag a song into a section — or tap it to hold it in Unsorted.';
+          results.appendChild(creationViewEl);
+        }
+        return;
+      }
+
       showTabs();
       pagination.style.display = 'none';
       results.replaceChildren();
@@ -462,97 +574,17 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
 
       cachedPlaylists = getPlaylists();
       updateTabLabels();
+      status.textContent = '';
 
-      const draftIds = getDraftIds();
-      const draftSongs = draftIds.map((id) => songById.get(id)).filter(Boolean);
-
-      if (draftSongs.length === 0 && cachedPlaylists.length === 0) {
-        status.textContent = 'No songs in your draft yet — use the + button on any song to add one.';
-      } else {
-        status.textContent = `${draftSongs.length} song${draftSongs.length === 1 ? '' : 's'} in your current draft`;
-      }
-
-      const buildingLabel = document.createElement('li');
-      buildingLabel.className = 'playlist-section-label section-label';
-      buildingLabel.textContent = 'Currently building';
-      results.appendChild(buildingLabel);
-
-      const controlsLi = document.createElement('li');
-      controlsLi.className = 'set-controls row';
-
-      const nameInput = document.createElement('input');
-      nameInput.type = 'text';
-      nameInput.placeholder = 'Name this service list (e.g. Sunday Service — Sept 28)';
-      nameInput.className = 'playlist-name-input input';
-      nameInput.maxLength = 100;
-      nameInput.value = draftNameValue;
-
-      const saveBtn = document.createElement('button');
-      saveBtn.type = 'button';
-      saveBtn.className = 'btn btn-primary';
-      saveBtn.textContent = 'Save';
-
-      function updateSaveDisabled() {
-        saveBtn.disabled = draftSongs.length === 0 || nameInput.value.trim().length === 0;
-      }
-      updateSaveDisabled();
-
-      nameInput.addEventListener('input', () => {
-        draftNameValue = nameInput.value;
-        updateSaveDisabled();
-      });
-
-      saveBtn.addEventListener('click', async () => {
-        saveBtn.disabled = true;
-        try {
-          const savedName = nameInput.value.trim();
-          const savedCount = draftSongs.length;
-          const savedId = await saveDraftAsPlaylist(savedName);
-          const savedAt = new Date().toISOString();
-          justCreated.set(savedId, { id: savedId, name: savedName, count: savedCount, createdAt: savedAt, updatedAt: savedAt });
-          publicLists = [justCreated.get(savedId), ...publicLists];
-          draftNameValue = '';
-          renderPlaylistsTab();
-        } catch (err) {
-          updateSaveDisabled();
-          showTransientStatus(err.message || 'Could not save this service list — check your connection and try again.');
-        }
-      });
-
-      const addSectionBtn = document.createElement('button');
-      addSectionBtn.type = 'button';
-      addSectionBtn.className = 'btn';
-      addSectionBtn.textContent = 'Add section';
-      addSectionBtn.addEventListener('click', async () => {
-        const name = await askSectionName();
-        if (!name) return;
-        updateDraft((items) => addHeading(items, name));
-        renderPlaylistsTab();
-      });
-
-      controlsLi.appendChild(nameInput);
-      controlsLi.appendChild(addSectionBtn);
-      controlsLi.appendChild(saveBtn);
-      results.appendChild(controlsLi);
-
-      for (const group of groupBySection(draftIds)) {
-        const rows = group.entries.map(({ item, index }) => {
-          const song = songById.get(item);
-          if (!song) return null;
-          return buildPlaylistSongRow(song, {
-            showUp: index > 0,
-            showDown: index < draftIds.length - 1,
-            onUp: () => { reorderInDraft(song.id, -1); renderPlaylistsTab(); },
-            onDown: () => { reorderInDraft(song.id, 1); renderPlaylistsTab(); },
-            onRemove: () => { removeFromDraft(song.id); renderPlaylistsTab(); },
-          });
-        }).filter(Boolean);
-        if (!group.heading) {
-          rows.forEach((row) => results.appendChild(row));
-        } else {
-          results.appendChild(buildDraftSection(group, rows, draftIds.length));
-        }
-      }
+      const newListBtn = document.createElement('li');
+      newListBtn.className = 'set-controls';
+      const newListBtnEl = document.createElement('button');
+      newListBtnEl.type = 'button';
+      newListBtnEl.className = 'btn btn-primary';
+      newListBtnEl.textContent = 'New Service List';
+      newListBtnEl.addEventListener('click', startNewList);
+      newListBtn.appendChild(newListBtnEl);
+      results.appendChild(newListBtn);
 
       const libraryLabel = document.createElement('li');
       libraryLabel.className = 'playlist-section-label section-label';
@@ -662,63 +694,8 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
       btn.addEventListener('click', () => switchTab(btn.dataset.tab));
     }
 
-    function levenshtein(a, b) {
-      const rows = a.length + 1;
-      const cols = b.length + 1;
-      const dist = Array.from({ length: rows }, (_, i) => [i, ...Array(cols - 1).fill(0)]);
-      for (let j = 0; j < cols; j++) dist[0][j] = j;
-      for (let i = 1; i < rows; i++) {
-        for (let j = 1; j < cols; j++) {
-          const cost = a[i - 1] === b[j - 1] ? 0 : 1;
-          dist[i][j] = Math.min(
-            dist[i - 1][j] + 1,
-            dist[i][j - 1] + 1,
-            dist[i - 1][j - 1] + cost,
-          );
-        }
-      }
-      return dist[rows - 1][cols - 1];
-    }
-
-    function fuzzyThreshold(len) {
-      if (len <= 4) return 1;
-      if (len <= 8) return 2;
-      return Math.floor(len * 0.3);
-    }
-
-    function fuzzyTitleMatches(query) {
-      const nq = normalizeTitle(query);
-      if (nq.length < 3) return [];
-      const singleWord = !nq.includes(' ');
-      const scored = [];
-      for (const song of data) {
-        const nt = normalizeTitle(song.title);
-        let best = levenshtein(nq, nt);
-        if (singleWord) {
-          for (const word of nt.split(' ')) {
-            const d = levenshtein(nq, word);
-            if (d < best) best = d;
-          }
-        }
-        if (best <= fuzzyThreshold(Math.min(nq.length, nt.length))) {
-          scored.push({ song, dist: best });
-        }
-      }
-      scored.sort((a, b) => a.dist - b.dist);
-      return scored.slice(0, 8).map((s) => s.song);
-    }
-
-    function snippetParts(lyrics, q) {
-      const idx = lyrics.toLowerCase().indexOf(q);
-      if (idx === -1) return null;
-      const start = Math.max(0, idx - 30);
-      const end = Math.min(lyrics.length, idx + q.length + 50);
-      return {
-        before: (start > 0 ? '…' : '') + lyrics.slice(start, idx).replace(/\s+/g, ' '),
-        match: lyrics.slice(idx, idx + q.length),
-        after: lyrics.slice(idx + q.length, end).replace(/\s+/g, ' ') + (end < lyrics.length ? '…' : ''),
-      };
-    }
+    // levenshtein/fuzzyThreshold/fuzzyTitleMatches/snippetParts now live in
+    // song-search.js, imported above — no local copies.
 
     function buildCard(song, query, page, from) {
       const li = document.createElement('li');
@@ -755,23 +732,6 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
       }
 
       li.appendChild(a);
-
-      const addBtn = document.createElement('button');
-      addBtn.type = 'button';
-      addBtn.className = 'btn btn-icon btn-sm add-to-set-btn';
-      addBtn.title = 'Add to list';
-      addBtn.textContent = '+';
-      addBtn.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        addToDraft(song.id);
-        // The song lands in the last section; make sure it is open so the song is visible.
-        const lastDraftHeading = [...getDraftIds()].reverse().find(isHeading);
-        if (lastDraftHeading) closedDraftSections.delete(lastDraftHeading.section);
-        showTransientStatus(`Added "${song.title}" to your draft`);
-        if (currentTab === 'set') renderPlaylistsTab();
-      });
-      li.appendChild(addBtn);
 
       return li;
     }
@@ -851,7 +811,7 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
         return;
       }
 
-      const fuzzyMatches = fuzzyTitleMatches(query);
+      const fuzzyMatches = fuzzyTitleMatches(data, query);
       if (fuzzyMatches.length > 0) {
         status.textContent = `No exact matches for "${query}". Showing songs with similar titles:`;
         for (const song of fuzzyMatches) results.appendChild(buildCard(song, ''));
