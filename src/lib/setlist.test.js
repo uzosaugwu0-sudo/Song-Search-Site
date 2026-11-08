@@ -323,6 +323,9 @@ test('prepareSongIdsForCreate still enforces the existing size and section-count
   const valid = new Set(Array.from({ length: 60 }, (_, i) => `id${i}`));
   const tooManySongs = [{ section: 'A' }, ...Array.from({ length: 51 }, (_, i) => `id${i}`)];
   assert.equal(prepareSongIdsForCreate(tooManySongs, valid).error, 'A set list can hold at most 50 songs');
+
+  const tooManySections = [...Array.from({ length: 11 }, (_, i) => ({ section: `S${i}` })), 'id0'];
+  assert.equal(prepareSongIdsForCreate(tooManySections, valid).error, 'A set list can have at most 10 sections');
 });
 
 test('prepareSongIdsForUpdate does not require a section or an empty Unsorted', () => {

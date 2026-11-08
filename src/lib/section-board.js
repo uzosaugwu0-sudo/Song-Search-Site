@@ -47,6 +47,10 @@ export function mountSectionBoard(container, { songs, getItems, onChange, render
     const link = document.createElement('a');
     link.className = 'row-title';
     link.href = `/song/${song.slug}/`;
+    // New tab: on the creation screen the list is only in memory until Create
+    // is pressed, so navigating away in the same tab would lose it.
+    link.target = '_blank';
+    link.rel = 'noopener';
     link.textContent = song.title;
     li.appendChild(link);
 

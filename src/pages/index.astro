@@ -492,6 +492,7 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
       function updateBoardLook() {
         const ready = creationName.trim().length > 0 && creationItems.some(isHeading);
         boardContainer.classList.toggle('section-board-disabled', !ready);
+        boardContainer.inert = !ready;
       }
 
       function updateCreateDisabled() {
@@ -694,8 +695,6 @@ const songsJson = JSON.stringify(songs).replace(/</g, '\\u003c');
       btn.addEventListener('click', () => switchTab(btn.dataset.tab));
     }
 
-    // levenshtein/fuzzyThreshold/fuzzyTitleMatches/snippetParts now live in
-    // song-search.js, imported above — no local copies.
 
     function buildCard(song, query, page, from) {
       const li = document.createElement('li');
