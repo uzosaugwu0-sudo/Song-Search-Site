@@ -51,8 +51,7 @@ const setInitJson = JSON.stringify({ setId: id, initialSongIds, initialName })
         <ul id="set-songs"></ul>
 
         <h2>Add a song</h2>
-        <input type="search" id="add-search" class="input" placeholder="Search by title or lyrics..." />
-        <ul id="add-results"></ul>
+        <div id="add-song-board"></div>
       </div>
     )}
   </div>
@@ -113,17 +112,36 @@ const setInitJson = JSON.stringify({ setId: id, initialSongIds, initialName })
       font-weight: 700;
       margin-top: var(--space-3);
     }
-    #add-search { margin-top: var(--space-2); }
-    #add-results .btn { width: 100%; justify-content: flex-start; font-weight: 500; }
+    #add-song-board { display: flex; flex-direction: column; gap: var(--space-3); margin-top: var(--space-2); }
+    .section-board-results {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+    }
+    .section-board-result {
+      width: 100%;
+      justify-content: flex-start;
+      text-align: left;
+      font-weight: 500;
+      touch-action: none;
+    }
+    .set-song.dragging, .section-board-result.dragging { opacity: 0.5; }
+    [data-drop-zone].drag-over { border-color: var(--color-primary); background: var(--color-primary-soft); }
+    .set-group[data-drop-zone] { border: 1px solid transparent; border-radius: var(--radius-control); }
   </style>
 
   <script type="application/json" id="songs-data" set:html={songsJson} />
   <script type="application/json" id="set-init-data" set:html={setInitJson} />
   <script>
     import { updateSetlist, deleteSetlist, isInLibrary, addPlaylistToLibrary, removePlaylistFromLibrary, updatePlaylistNameInLibrary } from '../../lib/setlist-client.js';
-    import { isHeading, countSongs, addHeading, renameHeading, groupBySection } from '../../lib/sections.js';
+    import { countSongs, addHeading, renameHeading, groupBySection, moveToAdjacentSection, placeInSection } from '../../lib/sections.js';
     import { askSectionName, confirmDialog } from '../../lib/dialogs.js';
     import { formatListDate } from '../../lib/setlist.js';
+    import { mountSectionBoard } from '../../lib/section-board.js';
+    import { makeDraggable } from '../../lib/drag.js';
 
     const setSongsList = document.getElementById('set-songs');
 
@@ -138,6 +156,7 @@ const setInitJson = JSON.stringify({ setId: id, initialSongIds, initialName })
       dateEl.textContent = formatListDate(dateEl.dateTime);
 
       const closedSections = new Set();
+      let addSongBoard;
 
       function renderSetSongs() {
         setSongsList.replaceChildren();
@@ -148,17 +167,49 @@ const setInitJson = JSON.stringify({ setId: id, initialSongIds, initialName })
           statusEl.textContent = `${songCount} song${songCount === 1 ? '' : 's'} in this set`;
         }
 
-        for (const group of groupBySection(currentIds)) {
-          const rows = group.entries.map(({ item, index }) => buildSongRow(item, index)).filter(Boolean);
+        const groups = groupBySection(currentIds);
+        groups.forEach((group, index) => {
+          const rows = group.entries.map(({ item, index: songIndex }) => buildSongRow(item, songIndex, index, groups)).filter(Boolean);
           if (!group.heading) {
-            rows.forEach((row) => setSongsList.appendChild(row));
+            setSongsList.appendChild(buildUnsortedZone(rows));
           } else {
-            setSongsList.appendChild(buildSection(group, rows));
+            setSongsList.appendChild(buildSection(group, rows, index));
           }
-        }
+        });
+
+        // Keep the add-song board's zoneId -> heading map (and its search
+        // results' dedup against currentIds) in sync with what just rendered.
+        addSongBoard?.rerender();
       }
 
-      function buildSongRow(songId, index) {
+      // Always rendered, even when empty, so a song can always be dragged
+      // back into Unsorted.
+      function buildUnsortedZone(rows) {
+        const li = document.createElement('li');
+        li.className = 'set-group';
+        li.dataset.dropZone = 'unsorted';
+
+        const label = document.createElement('div');
+        label.className = 'set-song set-section row';
+        label.textContent = 'Unsorted';
+        li.appendChild(label);
+
+        const songs = document.createElement('ul');
+        songs.className = 'set-group-songs';
+        rows.forEach((row) => songs.appendChild(row));
+        li.appendChild(songs);
+
+        return li;
+      }
+
+      // zoneId ("unsorted" / "zone-<i>") -> the heading that group belongs
+      // to in THIS render's groups, for resolving an arrow/drag move.
+      function headingForZone(zoneId, groups) {
+        const index = groups.findIndex((g, i) => (g.heading === null ? 'unsorted' : `zone-${i}`) === zoneId);
+        return index === -1 ? undefined : groups[index].heading;
+      }
+
+      function buildSongRow(songId, index, groupIndex, groups) {
         const song = songById.get(songId);
         if (!song) return null;
 
@@ -185,16 +236,16 @@ const setInitJson = JSON.stringify({ setId: id, initialSongIds, initialName })
         upBtn.type = 'button';
         upBtn.className = 'btn btn-sm';
         upBtn.textContent = '↑';
-        upBtn.disabled = index === 0;
-        upBtn.addEventListener('click', () => reorder(index, -1));
+        upBtn.disabled = groupIndex - 1 < 0;
+        upBtn.addEventListener('click', () => persist(moveToAdjacentSection(currentIds, songId, -1)));
         controls.appendChild(upBtn);
 
         const downBtn = document.createElement('button');
         downBtn.type = 'button';
         downBtn.className = 'btn btn-sm';
         downBtn.textContent = '↓';
-        downBtn.disabled = index === currentIds.length - 1;
-        downBtn.addEventListener('click', () => reorder(index, 1));
+        downBtn.disabled = groupIndex + 1 >= groups.length;
+        downBtn.addEventListener('click', () => persist(moveToAdjacentSection(currentIds, songId, 1)));
         controls.appendChild(downBtn);
 
         const removeBtn = document.createElement('button');
@@ -205,15 +256,21 @@ const setInitJson = JSON.stringify({ setId: id, initialSongIds, initialName })
         controls.appendChild(removeBtn);
 
         li.appendChild(controls);
+
+        makeDraggable(li, {
+          onDrop: (zoneId) => persist(placeInSection(currentIds, songId, headingForZone(zoneId, groups))),
+        });
+
         return li;
       }
 
       // A section header (click to open/close) with its songs underneath.
       // ponytail: closed state is remembered by section name, so duplicate names share it.
-      function buildSection(group, rows) {
+      function buildSection(group, rows, groupIndex) {
         const name = group.heading.section;
         const li = document.createElement('li');
         li.className = 'set-group';
+        li.dataset.dropZone = `zone-${groupIndex}`;
 
         const details = document.createElement('details');
         details.open = !closedSections.has(name);
@@ -305,15 +362,14 @@ const setInitJson = JSON.stringify({ setId: id, initialSongIds, initialName })
         persist(currentIds.filter((_, i) => i !== index));
       }
 
-      function addSong(songId) {
-        if (currentIds.includes(songId)) return;
-        // New songs land in the last section; make sure it is open so the song is visible.
-        const lastHeading = [...currentIds].reverse().find(isHeading);
-        if (lastHeading) closedSections.delete(lastHeading.section);
-        persist([...currentIds, songId]);
-      }
-
       renderSetSongs();
+
+      addSongBoard = mountSectionBoard(document.getElementById('add-song-board'), {
+        songs: data,
+        getItems: () => currentIds,
+        onChange: persist,
+        renderZones: false,
+      });
 
       document.getElementById('add-section').addEventListener('click', async () => {
         const name = await askSectionName();
@@ -383,31 +439,6 @@ const setInitJson = JSON.stringify({ setId: id, initialSongIds, initialName })
           location.href = '/';
         } catch (err) {
           statusEl.textContent = err.message;
-        }
-      });
-
-      const addInput = document.getElementById('add-search');
-      const addResults = document.getElementById('add-results');
-      addInput.addEventListener('input', (e) => {
-        const q = e.target.value.trim().toLowerCase();
-        addResults.replaceChildren();
-        if (!q) return;
-        const matches = data
-          .filter((song) => !currentIds.includes(song.id) && (song.title.toLowerCase().includes(q) || song.lyrics.toLowerCase().includes(q)))
-          .slice(0, 8);
-        for (const song of matches) {
-          const li = document.createElement('li');
-          const btn = document.createElement('button');
-          btn.type = 'button';
-          btn.className = 'btn';
-          btn.textContent = `+ ${song.title}`;
-          btn.addEventListener('click', () => {
-            addSong(song.id);
-            addInput.value = '';
-            addResults.replaceChildren();
-          });
-          li.appendChild(btn);
-          addResults.appendChild(li);
         }
       });
 

@@ -5,7 +5,13 @@ import { searchSongs } from './song-search.js';
 import { makeDraggable } from './drag.js';
 import { placeInSection, moveToAdjacentSection, groupBySection } from './sections.js';
 
-export function mountSectionBoard(container, { songs, getItems, onChange }) {
+// renderZones: false lets a page that already renders its own section/song
+// rows (set/[id].astro, which carries its own Rename/Remove controls the
+// board doesn't know about) reuse just the search box and draggable results,
+// while still computing an up-to-date zoneMap each rerender() so drops onto
+// that page's own data-drop-zone elements (using the same 'unsorted'/
+// 'zone-<i>' scheme) resolve correctly.
+export function mountSectionBoard(container, { songs, getItems, onChange, renderZones = true }) {
   container.replaceChildren();
 
   const searchInput = document.createElement('input');
@@ -20,7 +26,7 @@ export function mountSectionBoard(container, { songs, getItems, onChange }) {
 
   const boardList = document.createElement('ul');
   boardList.className = 'section-board-zones';
-  container.appendChild(boardList);
+  if (renderZones) container.appendChild(boardList);
 
   // zone id ("unsorted" / "zone-<i>") -> the real heading reference (or null
   // for Unsorted) for the CURRENT render, so a drop can resolve back to the
@@ -122,9 +128,15 @@ export function mountSectionBoard(container, { songs, getItems, onChange }) {
 
   function rerender() {
     zoneMap = new Map();
-    boardList.replaceChildren();
     const groups = groupBySection(getItems());
-    groups.forEach((group, index) => boardList.appendChild(buildZone(group, index, groups)));
+    if (renderZones) {
+      boardList.replaceChildren();
+      groups.forEach((group, index) => boardList.appendChild(buildZone(group, index, groups)));
+    } else {
+      // Not rendering our own zones, but still need zoneId -> heading for
+      // drops onto the caller's own elements using the same id scheme.
+      groups.forEach((group, index) => zoneMap.set(group.heading === null ? 'unsorted' : `zone-${index}`, group.heading));
+    }
     renderResults(searchInput.value.trim());
   }
 
