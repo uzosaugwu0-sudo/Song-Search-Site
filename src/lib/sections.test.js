@@ -83,3 +83,71 @@ test('groupBySection keeps unheaded songs first, then one group per heading with
 test('groupBySection of an empty list is one empty unheaded group', () => {
   assert.deepEqual(groupBySection([]), [{ heading: null, headingIndex: -1, entries: [] }]);
 });
+
+import { countUnsorted, placeInSection, moveToAdjacentSection } from './sections.js';
+
+test('countUnsorted counts only the songs before the first heading', () => {
+  assert.equal(countUnsorted(['a', 'b', { section: 'Praise' }, 'c']), 2);
+  assert.equal(countUnsorted([{ section: 'Praise' }, 'a']), 0);
+  assert.equal(countUnsorted([]), 0);
+});
+
+test('placeInSection appends a new song to the end of a named section', () => {
+  const H1 = { section: 'Opening' };
+  assert.deepEqual(placeInSection(['a', H1, 'b'], 'c', H1), ['a', H1, 'b', 'c']);
+});
+
+test('placeInSection appends a new song to Unsorted when targetHeading is null', () => {
+  assert.deepEqual(placeInSection(['a', 'b'], 'c', null), ['a', 'b', 'c']);
+});
+
+test('placeInSection inserts before the next heading, not at the end of the array', () => {
+  const H1 = { section: 'Opening' };
+  const H2 = { section: 'Praise' };
+  assert.deepEqual(placeInSection(['a', H1, 'b', H2, 'c'], 'd', H1), ['a', H1, 'b', 'd', H2, 'c']);
+});
+
+test('placeInSection moves an already-placed song: removes it from its old spot first', () => {
+  const H1 = { section: 'Opening' };
+  const H2 = { section: 'Praise' };
+  assert.deepEqual(placeInSection(['a', H1, 'b', H2, 'c'], 'b', H2), ['a', H1, H2, 'c', 'b']);
+});
+
+test('placeInSection can move a placed song back into Unsorted', () => {
+  const H1 = { section: 'Opening' };
+  assert.deepEqual(placeInSection(['a', H1, 'b'], 'b', null), ['a', 'b', H1]);
+});
+
+test('placeInSection into a section that currently has no songs still lands correctly', () => {
+  const H1 = { section: 'Opening' };
+  const H2 = { section: 'Praise' };
+  assert.deepEqual(placeInSection(['a', H1, H2, 'b'], 'c', H1), ['a', H1, 'c', H2, 'b']);
+});
+
+test('placeInSection falls back to appending at the end if targetHeading is not found in items', () => {
+  const stray = { section: 'Nowhere' };
+  assert.deepEqual(placeInSection(['a', { section: 'Opening' }], 'c', stray), ['a', { section: 'Opening' }, 'c']);
+});
+
+test('moveToAdjacentSection moves a song to the previous section', () => {
+  const H1 = { section: 'Opening' };
+  const H2 = { section: 'Praise' };
+  assert.deepEqual(moveToAdjacentSection(['a', H1, H2, 'b'], 'b', -1), ['a', H1, 'b', H2]);
+});
+
+test('moveToAdjacentSection moves a song to the next section', () => {
+  const H1 = { section: 'Opening' };
+  const H2 = { section: 'Praise' };
+  assert.deepEqual(moveToAdjacentSection(['a', H1, 'b', H2], 'b', 1), ['a', H1, H2, 'b']);
+});
+
+test('moveToAdjacentSection moving up from the first section lands in Unsorted', () => {
+  const H1 = { section: 'Opening' };
+  assert.deepEqual(moveToAdjacentSection(['a', H1, 'b'], 'b', -1), ['a', 'b', H1]);
+});
+
+test('moveToAdjacentSection is a no-op past the last section or before Unsorted', () => {
+  const H1 = { section: 'Opening' };
+  assert.deepEqual(moveToAdjacentSection(['a', H1, 'b'], 'b', 1), ['a', H1, 'b']);
+  assert.deepEqual(moveToAdjacentSection(['a', H1, 'b'], 'a', -1), ['a', H1, 'b']);
+});
