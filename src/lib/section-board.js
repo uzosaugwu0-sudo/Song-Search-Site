@@ -73,6 +73,13 @@ export function mountSectionBoard(container, { songs, getItems, onChange, render
     downBtn.addEventListener('click', () => onChange(moveToAdjacentSection(getItems(), songId, 1)));
     controls.appendChild(downBtn);
 
+    const removeBtn = document.createElement('button');
+    removeBtn.type = 'button';
+    removeBtn.className = 'btn btn-sm btn-danger';
+    removeBtn.textContent = 'Remove';
+    removeBtn.addEventListener('click', () => onChange(getItems().filter((item) => item !== songId)));
+    controls.appendChild(removeBtn);
+
     li.appendChild(controls);
 
     makeDraggable(li, {
