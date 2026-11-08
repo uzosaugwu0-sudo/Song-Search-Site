@@ -1,7 +1,7 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import { loadSongs } from '../../lib/songs-data.js';
-import { parseLiveSetlist } from '../../lib/setlist.js';
+import { parseLiveSetlist, formatListDate } from '../../lib/setlist.js';
 
 export const prerender = false;
 
@@ -39,7 +39,7 @@ const setInitJson = JSON.stringify({ setId: id, initialSongIds, initialName })
           <span id="playlist-name">{initialName}</span>
           <input type="text" id="rename-input" class="input" value={initialName} hidden />
         </h1>
-        <p class="list-date"><time id="list-date" class="badge" datetime={liveSet.createdAt ?? liveSet.updatedAt}></time></p>
+        <p class="list-date"><time id="list-date" class="badge" datetime={liveSet.createdAt ?? liveSet.updatedAt}>{formatListDate(liveSet.createdAt ?? liveSet.updatedAt)}</time></p>
         <div class="actions">
           <button id="rename-btn" class="btn">Rename</button>
           <button id="copy-link" class="btn btn-primary">Copy link</button>
@@ -140,7 +140,6 @@ const setInitJson = JSON.stringify({ setId: id, initialSongIds, initialName })
     import { updateSetlist, deleteSetlist, isInLibrary, addPlaylistToLibrary, removePlaylistFromLibrary, updatePlaylistNameInLibrary } from '../../lib/setlist-client.js';
     import { countSongs, addHeading, renameHeading, groupBySection, moveToAdjacentSection, placeInSection } from '../../lib/sections.js';
     import { askSectionName, confirmDialog } from '../../lib/dialogs.js';
-    import { formatListDate } from '../../lib/setlist.js';
     import { mountSectionBoard } from '../../lib/section-board.js';
     import { makeDraggable } from '../../lib/drag.js';
 
@@ -153,8 +152,6 @@ const setInitJson = JSON.stringify({ setId: id, initialSongIds, initialName })
       let currentIds = initialSongIds;
       let currentName = initialName;
       const statusEl = document.getElementById('status');
-      const dateEl = document.getElementById('list-date');
-      dateEl.textContent = formatListDate(dateEl.dateTime);
 
       const closedSections = new Set();
       let addSongBoard;
