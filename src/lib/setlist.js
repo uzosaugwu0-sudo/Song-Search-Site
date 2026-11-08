@@ -1,4 +1,4 @@
-import { isHeading, countSongs, MAX_SETLIST_SECTIONS, MAX_SECTION_NAME_LENGTH } from './sections.js';
+import { isHeading, countSongs, countUnsorted, MAX_SETLIST_SECTIONS, MAX_SECTION_NAME_LENGTH } from './sections.js';
 
 export const MAX_SETLIST_SIZE = 50;
 export const MAX_SETLIST_NAME_LENGTH = 100;
@@ -143,6 +143,12 @@ export function prepareSongIdsForCreate(requestedIds, validIds) {
   if (result.error) return result;
   if (countSongs(result.items) === 0) {
     return { error: 'A set list needs at least one song' };
+  }
+  if (!result.items.some(isHeading)) {
+    return { error: 'A set list needs at least one section' };
+  }
+  if (countUnsorted(result.items) > 0) {
+    return { error: 'Sort every song into a section before creating the list' };
   }
   return { songIds: result.items };
 }

@@ -72,9 +72,9 @@ test('prepareSongIdsForCreate rejects more than MAX_SETLIST_SIZE valid ids', () 
 
 test('prepareSongIdsForCreate accepts exactly MAX_SETLIST_SIZE valid ids', () => {
   const valid = new Set(Array.from({ length: 60 }, (_, i) => `id${i}`));
-  const requested = Array.from({ length: 50 }, (_, i) => `id${i}`);
+  const requested = [{ section: 'A' }, ...Array.from({ length: 50 }, (_, i) => `id${i}`)];
   const result = prepareSongIdsForCreate(requested, valid);
-  assert.equal(result.songIds.length, 50);
+  assert.equal(result.songIds.filter((item) => typeof item === 'string').length, 50);
   assert.equal(result.error, undefined);
 });
 
@@ -296,4 +296,37 @@ test('groupListsByDay marks only today as today and labels each day', () => {
 test('groupListsByDay handles no lists and skips entries without a usable date', () => {
   assert.deepEqual(groupListsByDay([], new Date()), []);
   assert.deepEqual(groupListsByDay([{ id: 'x', createdAt: 'nope' }], new Date()), []);
+});
+
+test('prepareSongIdsForCreate rejects a list with songs but no section', () => {
+  const result = prepareSongIdsForCreate(['a'], new Set(['a']));
+  assert.equal(result.error, 'A set list needs at least one section');
+});
+
+test('prepareSongIdsForCreate rejects a list with a section but something left in Unsorted', () => {
+  const result = prepareSongIdsForCreate(['a', { section: 'Opening' }, 'b'], new Set(['a', 'b']));
+  assert.equal(result.error, 'Sort every song into a section before creating the list');
+});
+
+test('prepareSongIdsForCreate accepts a list with a section and nothing left in Unsorted', () => {
+  const result = prepareSongIdsForCreate([{ section: 'Opening' }, 'a'], new Set(['a']));
+  assert.deepEqual(result.songIds, [{ section: 'Opening' }, 'a']);
+  assert.equal(result.error, undefined);
+});
+
+test('prepareSongIdsForCreate still rejects an empty list before checking for a section', () => {
+  const result = prepareSongIdsForCreate([], new Set(['a']));
+  assert.equal(result.error, 'A set list needs at least one song');
+});
+
+test('prepareSongIdsForCreate still enforces the existing size and section-count caps', () => {
+  const valid = new Set(Array.from({ length: 60 }, (_, i) => `id${i}`));
+  const tooManySongs = [{ section: 'A' }, ...Array.from({ length: 51 }, (_, i) => `id${i}`)];
+  assert.equal(prepareSongIdsForCreate(tooManySongs, valid).error, 'A set list can hold at most 50 songs');
+});
+
+test('prepareSongIdsForUpdate does not require a section or an empty Unsorted', () => {
+  const result = prepareSongIdsForUpdate(['a'], new Set(['a']));
+  assert.deepEqual(result.songIds, ['a']);
+  assert.equal(result.error, undefined);
 });
