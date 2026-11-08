@@ -106,7 +106,11 @@ export function mountSectionBoard(container, { songs, getItems, onChange, render
     resultsList.replaceChildren();
     if (!query) return;
     const items = getItems();
-    const results = searchSongs(songs, query).filter(({ song }) => !items.includes(song.id));
+    // Capped the same way the old minimal add-a-song box was: this is a
+    // small, space-constrained list, not a full search page, and an
+    // unbounded list of full-width buttons pushes the drop zones (and any
+    // actual drag target) off screen.
+    const results = searchSongs(songs, query).filter(({ song }) => !items.includes(song.id)).slice(0, 8);
     for (const { song, snippet } of results) {
       const li = document.createElement('li');
       const btn = document.createElement('button');

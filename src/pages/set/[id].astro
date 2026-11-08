@@ -128,6 +128,7 @@ const setInitJson = JSON.stringify({ setId: id, initialSongIds, initialName })
       font-weight: 500;
       touch-action: none;
     }
+    .set-group-songs > .set-song { touch-action: none; }
     .set-song.dragging, .section-board-result.dragging { opacity: 0.5; }
     [data-drop-zone].drag-over { border-color: var(--color-primary); background: var(--color-primary-soft); }
     .set-group[data-drop-zone] { border: 1px solid transparent; border-radius: var(--radius-control); }

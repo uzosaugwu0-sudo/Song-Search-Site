@@ -18,25 +18,45 @@
 export function makeDraggable(sourceEl, { onDrop, dragThreshold = 6 } = {}) {
   let startX = 0;
   let startY = 0;
+  let pointerId = null;
   let dragging = false;
   let currentZone = null;
+
+  // A link or button inside the row has its own default drag behaviour
+  // (dragging a link starts the browser's own link-drag). Disable it on
+  // every descendant so only this module's pointer-based drag can start.
+  sourceEl.querySelectorAll('a, button').forEach((el) => { el.draggable = false; });
+
+  function cleanup() {
+    if (pointerId !== null) sourceEl.releasePointerCapture?.(pointerId);
+    sourceEl.classList.remove('dragging');
+    currentZone?.classList.remove('drag-over');
+    dragging = false;
+    currentZone = null;
+    pointerId = null;
+  }
 
   sourceEl.addEventListener('pointerdown', (event) => {
     startX = event.clientX;
     startY = event.clientY;
+    pointerId = event.pointerId;
     dragging = false;
     currentZone = null;
-    sourceEl.setPointerCapture(event.pointerId);
+    // Pointer capture is NOT taken here: capturing immediately would route
+    // every later pointerup (and so every click) on a button or link inside
+    // this row back to sourceEl instead, breaking those controls. It's
+    // taken once the drag is actually recognized, in pointermove below.
   });
 
   sourceEl.addEventListener('pointermove', (event) => {
-    if (!sourceEl.hasPointerCapture?.(event.pointerId)) return;
+    if (event.pointerId !== pointerId) return;
     if (!dragging) {
       const dx = event.clientX - startX;
       const dy = event.clientY - startY;
       if (Math.hypot(dx, dy) < dragThreshold) return;
       dragging = true;
       sourceEl.classList.add('dragging');
+      sourceEl.setPointerCapture(event.pointerId);
     }
     const zone = document.elementFromPoint(event.clientX, event.clientY)?.closest('[data-drop-zone]') ?? null;
     if (zone !== currentZone) {
@@ -47,11 +67,16 @@ export function makeDraggable(sourceEl, { onDrop, dragThreshold = 6 } = {}) {
   });
 
   sourceEl.addEventListener('pointerup', (event) => {
+    if (event.pointerId !== pointerId) return;
     if (dragging && currentZone) onDrop(currentZone.dataset.dropZone);
-    sourceEl.releasePointerCapture?.(event.pointerId);
-    sourceEl.classList.remove('dragging');
-    currentZone?.classList.remove('drag-over');
-    dragging = false;
-    currentZone = null;
+    cleanup();
+  });
+
+  // The browser can cancel a pointer sequence mid-drag (a touch becomes a
+  // scroll gesture, a link's own native drag takes over). Without this, the
+  // row would be stuck at half-opacity with a zone stuck highlighted.
+  sourceEl.addEventListener('pointercancel', (event) => {
+    if (event.pointerId !== pointerId) return;
+    cleanup();
   });
 }
