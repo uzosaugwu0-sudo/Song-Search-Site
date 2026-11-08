@@ -1,8 +1,4 @@
-const DRAFT_KEY = 'songSearchSetDraft';
 const PLAYLISTS_KEY = 'songSearchPlaylists';
-// Task 8 (not yet run) removes song/[slug].astro's "Add to List" button, the
-// last caller of addToDraft — keep it (and DRAFT_KEY/readList/writeList)
-// until then, or the build breaks on that file's now-dangling import.
 
 function readList(key) {
   try { return JSON.parse(localStorage.getItem(key) || '[]'); }
@@ -46,21 +42,6 @@ export async function listSetlists() {
 export async function deleteSetlist(id) {
   const response = await fetch(`/api/setlists/${id}`, { method: 'DELETE' });
   if (!response.ok) throw new Error('Could not delete this service list');
-}
-
-// --- Draft helpers: the playlist currently being built. Always local-only
-// (localStorage, no network), so there's no read-modify-write race. ---
-
-export function getDraftIds() {
-  return readList(DRAFT_KEY);
-}
-
-export function addToDraft(songId) {
-  const ids = getDraftIds();
-  if (ids.includes(songId)) return ids;
-  const next = [...ids, songId];
-  writeList(DRAFT_KEY, next);
-  return next;
 }
 
 // --- Library helpers: the local "My Playlists" list. Purely a per-browser

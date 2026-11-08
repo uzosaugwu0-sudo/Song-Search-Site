@@ -26,7 +26,7 @@ const description = song
   </Layout>
 ) : (
 <Layout title={`${song.title} — Song Search`} description={description}>
-  <div class="page">
+  <div class="page" data-song-id={song.id}>
     <p><a href="/" id="back-link">← Back to search</a></p>
     <h1>{song.title}</h1>
     {song.author && <p class="author">{song.author}</p>}
@@ -48,7 +48,6 @@ const description = song
       <button id="favorite-toggle" class="btn" aria-pressed="false">
         <span id="favorite-star">☆</span> Favorite
       </button>
-      <button id="add-to-set" class="btn" data-song-id={song.id}>Add to List</button>
     </div>
   </div>
 
@@ -150,19 +149,9 @@ const description = song
   </script>
 
   <script>
-    import { addToDraft } from '../../lib/setlist-client.js';
     import { recordView } from '../../lib/recent.js';
 
-    const addToSetBtn = document.getElementById('add-to-set');
-    recordView(addToSetBtn.dataset.songId);
-    const addToSetDefaultText = addToSetBtn.textContent;
-    addToSetBtn.addEventListener('click', () => {
-      addToDraft(addToSetBtn.dataset.songId);
-      addToSetBtn.textContent = 'Added!';
-      setTimeout(() => {
-        addToSetBtn.textContent = addToSetDefaultText;
-      }, 1500);
-    });
+    recordView(document.querySelector('.page').dataset.songId);
   </script>
 </Layout>
 )}
